@@ -4,6 +4,7 @@ namespace Krugozor\Database;
 
 use mysqli;
 use mysqli_result;
+use mysqli_sql_exception;
 
 /**
  * @author Vasiliy Makogon
@@ -11,13 +12,13 @@ use mysqli_result;
  */
 class Mysql
 {
-    /** @var int Строгий режим работы */
+    /** @var int Strict working hours */
     public const MODE_STRICT = 1;
 
-    /** @var int Толерантный режим работы */
+    /** @var int Tolerant operating mode */
     public const MODE_TRANSFORM = 2;
 
-    /** @var int Актуальный режим работы */
+    /** @var int Current operating mode */
     protected int $type_mode = self::MODE_TRANSFORM;
 
     /** @var string|null */
@@ -35,34 +36,34 @@ class Mysql
     /** @var int|string|null */
     protected int|string|null $socket;
 
-    /** @var string Имя текущей БД */
+    /** @var string */
     protected string $database_name;
 
     /** @var mysqli|null */
     protected ?mysqli $mysqli = null;
 
-    /** @var string|null Строка последнего SQL-запроса ДО преобразования */
+    /** @var string|null Last SQL query string BEFORE conversion */
     private ?string $original_query = null;
 
-    /** @var string|null Строка последнего SQL-запроса ПОСЛЕ преобразования */
+    /** @var string|null Last SQL query string AFTER conversion */
     private ?string $query = null;
 
     /**
-     * Массив со всеми запросами, которые были выполнены объектом.
-     * Ключи - SQL после преобразования, значения - SQL до преобразования.
+     * An array with all queries that have been executed by the object.
+     * Keys are SQL after transformation, values are SQL before transformation.
      *
      * @var array
      */
     private array $queries = [];
 
-    /** @var bool Накапливать ли в хранилище self::$queries SQL-запросы */
+    /** @var bool Whether to accumulate SQL queries in self::$queries storage */
     private bool $store_queries = false;
 
-    /** @var string Язык сообщений об ошибках */
+    /** @var string Error message language */
     private string $lang = 'en';
 
     /**
-     * Сообщения об ошибках на разных языках.
+     * Error messages in different languages.
      *
      * @var array|array[]
      */
@@ -74,7 +75,7 @@ class Mysql
             3 => '%s: unknown mode specified for library "%s", use allowed modes: "%s"',
             4 => '%s: no SQL query passed',
             5 => '%s: SQL query execution error: %s; SQL: %s',
-            6 => 'attempted to set placeholder type "%s" to value type "%s" in query template "%s"',
+            6 => 'attempt to specify a value of type "%s" for placeholder of type "%s" in query template "%s"',
             7 => '%s: number of placeholders in query "%s" does not match number of arguments passed',
             8 => 'Mismatch in the number of arguments and placeholders in the array, query: "%s"',
             9 => 'Attempting to use an array placeholder without specifying the data type of its elements',
@@ -117,7 +118,7 @@ class Mysql
     }
 
     /**
-     * Устанавливает язык вывода ошибок.
+     * Sets the error output language.
      *
      * @param string $lang
      * @return $this
@@ -126,12 +127,16 @@ class Mysql
     public function setErrorMessagesLang(string $lang): self
     {
         if (!array_key_exists($lang, $this->i18n_error_messages)) {
-            throw new MySqlException(sprintf(
-                '%s: language "%s" is not supported, use any of: "%s". ' .
-                "Make a pull request for this library, or derive a new class from class 'Mysql' and add the " .
-                "internationalization language for your language to property self::\$exception_i18n_messages",
-                __METHOD__, $lang, implode('", "', array_keys($this->i18n_error_messages))
-            ));
+            throw new MySqlException(
+                sprintf(
+                    '%s: language "%s" is not supported, use any of: "%s". ' .
+                    "Make a pull request for this library, or derive a new class from class 'Mysql' and add the " .
+                    "internationalization language for your language to property self::\$exception_i18n_messages",
+                    __METHOD__,
+                    $lang,
+                    implode('", "', array_keys($this->i18n_error_messages))
+                )
+            );
         }
 
         $this->lang = $lang;
@@ -140,8 +145,9 @@ class Mysql
     }
 
     /**
-     * Задаёт набор символов, который будет использоваться при обмене данными с сервером баз данных.
-     * Вызов данного метода эквивалентен следующей установки конфигурации MySql-сервера:
+     * Specifies the character set that will be used when exchanging data with the database server.
+     * Calling this method is equivalent to the following MySql server configuration setting:
+     *
      * SET character_set_client = charset_name;
      * SET character_set_results = charset_name;
      * SET character_set_connection = charset_name;
@@ -160,7 +166,7 @@ class Mysql
         try {
             // Подавление `собакой` вывода ошибки для режима MYSQLI_REPORT_ERROR
             $result = @$this->mysqli->set_charset($charset);
-        } catch (\mysqli_sql_exception $mysqli_sql_exception) {
+        } catch (mysqli_sql_exception $mysqli_sql_exception) {
             $result = false;
         }
 
@@ -169,20 +175,21 @@ class Mysql
         $error_message = $mysqli_sql_exception ? $mysqli_sql_exception->getMessage() : $this->mysqli->error;
 
         if ($result === false) {
-            throw new MySqlException(sprintf(
-                $this->i18n_error_messages[$this->lang][0],
-                __METHOD__,
-                $error_message
-            ), $error_code, $mysqli_sql_exception);
+            throw new MySqlException(
+                sprintf(
+                    $this->i18n_error_messages[$this->lang][0],
+                    __METHOD__,
+                    $error_message
+                ), $error_code, $mysqli_sql_exception
+            );
         }
 
         return $this;
     }
 
     /**
-     * Возвращает кодировку, установленную для соединения с БД.
+     * Returns the encoding set for the database connection.
      *
-     * @param void
      * @return string
      * @see mysqli::character_set_name
      */
@@ -192,9 +199,9 @@ class Mysql
     }
 
     /**
-     * Устанавливает имя используемой СУБД.
+     * Sets the name of the database to use.
      *
-     * @param string имя базы данных
+     * @param string $database_name
      * @return Mysql
      * @throws MySqlException
      * @see mysqli::select_db
@@ -202,9 +209,12 @@ class Mysql
     public function setDatabaseName(string $database_name): Mysql
     {
         if (!$database_name) {
-            throw new MySqlException(sprintf(
-                $this->i18n_error_messages[$this->lang][1], __METHOD__
-            ));
+            throw new MySqlException(
+                sprintf(
+                    $this->i18n_error_messages[$this->lang][1],
+                    __METHOD__
+                )
+            );
         }
 
         $this->database_name = $database_name;
@@ -216,7 +226,7 @@ class Mysql
         try {
             // Подавление `собакой` вывода ошибки для режима MYSQLI_REPORT_ERROR
             $result = @$this->mysqli->select_db($this->database_name);
-        } catch (\mysqli_sql_exception $mysqli_sql_exception) {
+        } catch (mysqli_sql_exception $mysqli_sql_exception) {
             $result = false;
         }
 
@@ -225,18 +235,20 @@ class Mysql
         $error_message = $mysqli_sql_exception ? $mysqli_sql_exception->getMessage() : $this->mysqli->error;
 
         if ($result === false) {
-            throw new MySqlException(sprintf(
-                $this->i18n_error_messages[$this->lang][2],
-                __METHOD__,
-                $error_message
-            ), $error_code, $mysqli_sql_exception);
+            throw new MySqlException(
+                sprintf(
+                    $this->i18n_error_messages[$this->lang][2],
+                    __METHOD__,
+                    $error_message
+                ), $error_code, $mysqli_sql_exception
+            );
         }
 
         return $this;
     }
 
     /**
-     * Возвращает имя текущей БД.
+     * Returns the name of the current database.
      *
      * @return string
      */
@@ -246,7 +258,7 @@ class Mysql
     }
 
     /**
-     * Устанавливает режим поведения при несовпадении типа заполнителя и типа аргумента.
+     * Sets the behavior mode when the placeholder type and the argument type do not match.
      *
      * @param int $type
      * @return Mysql
@@ -255,12 +267,14 @@ class Mysql
     public function setTypeMode(int $type): Mysql
     {
         if (!in_array($type, [self::MODE_STRICT, self::MODE_TRANSFORM])) {
-            throw new MySqlException(sprintf(
-                $this->i18n_error_messages[$this->lang][3],
-                __METHOD__,
-                $type,
-                implode('", "', [self::MODE_STRICT, self::MODE_TRANSFORM])
-            ));
+            throw new MySqlException(
+                sprintf(
+                    $this->i18n_error_messages[$this->lang][3],
+                    __METHOD__,
+                    $type,
+                    implode('", "', [self::MODE_STRICT, self::MODE_TRANSFORM])
+                )
+            );
         }
 
         $this->type_mode = $type;
@@ -269,8 +283,8 @@ class Mysql
     }
 
     /**
-     * Устанавливает свойство $this->store_queries, отвечающее за накопление
-     * исполненных запросов в хранилище $this->queries.
+     * Sets the $this->store_queries property, which is responsible
+     * for accumulating executed queries in the $this->queries storage.
      *
      * @param bool $value
      * @return Mysql
@@ -283,24 +297,27 @@ class Mysql
     }
 
     /**
-     * Выполняет SQL-запрос.
-     * Принимает обязательный параметр - SQL-запрос и, в случае наличия,
-     * любое количество аргументов - значения заполнителей.
+     * Executes a SQL query.
+     * Accepts a mandatory parameter - a SQL query and, if any,
+     * any number of arguments - placeholder values.
      *
-     * @param mixed ...$args строка SQL-запроса и аргументы для заполнителей
-     * @return bool|Statement В случае успешного выполнения запросов, которые создают набор результатов,
-     *         таких как SELECT, SHOW, DESCRIBE или EXPLAIN, метод вернёт объект Statement.
-     *         Для остальных успешных запросов метод вернёт true.
-     *         При ошибке последует исключение MySqlException
+     * @param mixed ...$args SQL query string and arguments for placeholders
+     * @return bool|Statement On successful execution of queries that produce a result set,
+     * such as SELECT, SHOW, DESCRIBE, or EXPLAIN, the method will return a Statement object.
+     * For other successful queries, the method will return true.
+     * On error, a MySqlException will be thrown.
      * @throws MySqlException
      * @see mysqli::query
      */
     public function query(mixed ...$args): bool|Statement
     {
         if (!func_num_args()) {
-            throw new MySqlException(sprintf(
-                $this->i18n_error_messages[$this->lang][4], __METHOD__
-            ));
+            throw new MySqlException(
+                sprintf(
+                    $this->i18n_error_messages[$this->lang][4],
+                    __METHOD__
+                )
+            );
         }
 
         $query = $this->original_query = array_shift($args);
@@ -313,8 +330,8 @@ class Mysql
 
         try {
             // Подавление `собакой` вывода ошибки для режима MYSQLI_REPORT_ERROR
-            $result = @$this->mysqli->query($this->query, MYSQLI_STORE_RESULT);
-        } catch (\mysqli_sql_exception $mysqli_sql_exception) {
+            $result = @$this->mysqli->query($this->query);
+        } catch (mysqli_sql_exception $mysqli_sql_exception) {
             $result = false;
         }
 
@@ -327,15 +344,17 @@ class Mysql
         $error_message = $mysqli_sql_exception ? $mysqli_sql_exception->getMessage() : $this->mysqli->error;
 
         if ($result === false) {
-            throw new MySqlException(sprintf(
-                $this->i18n_error_messages[$this->lang][5],
-                __METHOD__,
-                $error_message,
-                $this->query
-            ), $error_code, $mysqli_sql_exception);
+            throw new MySqlException(
+                sprintf(
+                    $this->i18n_error_messages[$this->lang][5],
+                    __METHOD__,
+                    $error_message,
+                    $this->query
+                ), $error_code, $mysqli_sql_exception
+            );
         }
 
-        if (is_object($result) && $result instanceof mysqli_result) {
+        if ($result instanceof mysqli_result) {
             return new Statement($result);
         }
 
@@ -343,43 +362,46 @@ class Mysql
     }
 
     /**
-     * Поведение аналогично методу self::query(), только метод принимает только два параметра -
-     * SQL запрос $query и массив аргументов $arguments, которые и будут заменены на заменители в той
-     * последовательности, в которой они представлены в массиве $arguments.
+     * The behavior is similar to the self::query() method, except that the method takes only two parameters -
+     * SQL query $query and an array of arguments $arguments, which will be replaced with substitutes in the order
+     * in which they are presented in the $arguments array.
      *
-     * @param string
-     * @param array
-     * @return bool|Statement В случае успешного выполнения запросов, которые создают набор результатов,
-     *         таких как SELECT, SHOW, DESCRIBE или EXPLAIN, метод вернёт объект Statement.
-     *         Для остальных успешных запросов метод вернёт true.
-     *         При ошибке последует исключение MySqlException
+     * @param string $query
+     * @param array $arguments
+     * @return bool|Statement On successful execution of queries that produce a result set,
+     * such as SELECT, SHOW, DESCRIBE, or EXPLAIN, the method will return a Statement object.
+     * For other successful queries, the method will return true.
+     * On error, a MySqlException will be thrown.
      */
-    public function queryArguments($query, array $arguments = []): Statement|bool
+    public function queryArguments(string $query, array $arguments = []): Statement|bool
     {
         array_unshift($arguments, $query);
 
-        return call_user_func_array(array($this, 'query'), $arguments);
+        return call_user_func_array([$this, 'query'], $arguments);
     }
 
     /**
-     * Обёртка над методом $this->parse().
-     * Применяется для случаев, когда SQL-запрос формируется частями.
+     * Wrapper over the $this->parse() method.
+     * Used for cases when the SQL query is formed in parts.
      *
-     * Пример:
+     * Example:
      *     $db->prepare('WHERE `name` = "?s" OR `id` IN(?ai)', 'Василий', array(1, 2));
-     * Результат:
+     * Result:
      *     WHERE `name` = "Василий" OR `id` IN(1, 2)
      *
-     * @param mixed ...$args SQL-запрос или его часть и аргументы для заполнителей
+     * @param mixed ...$args SQL query or part of it and arguments for placeholders
      * @return string
      * @throws MySqlException
      */
     public function prepare(mixed ...$args): string
     {
         if (!func_num_args()) {
-            throw new MySqlException(sprintf(
-                $this->i18n_error_messages[$this->lang][4], __METHOD__
-            ));
+            throw new MySqlException(
+                sprintf(
+                    $this->i18n_error_messages[$this->lang][4],
+                    __METHOD__
+                )
+            );
         }
 
         $query = array_shift($args);
@@ -388,10 +410,10 @@ class Mysql
     }
 
     /**
-     * Получает количество рядов, задействованных в предыдущей MySQL-операции.
-     * Возвращает количество рядов, задействованных в последнем запросе INSERT, UPDATE или DELETE.
-     * Если последним запросом был DELETE без оператора WHERE,
-     * все записи таблицы будут удалены, но функция возвратит ноль.
+     * Gets the number of rows affected by the previous MySQL operation.
+     * Returns the number of rows affected by the last INSERT, UPDATE, or DELETE query.
+     * If the last query was a DELETE without a WHERE clause,
+     * all records in the table will be deleted, but the function will return zero.
      *
      * @return int
      * @see mysqli::affected_rows
@@ -402,7 +424,7 @@ class Mysql
     }
 
     /**
-     * Возвращает последний оригинальный SQL-запрос до преобразования.
+     * Returns the last original SQL query before transformation.
      *
      * @return string|null
      */
@@ -412,7 +434,7 @@ class Mysql
     }
 
     /**
-     * Возвращает последний выполненный MySQL-запрос (после преобразования).
+     * Returns the last executed MySQL query (after transformation).
      *
      * @return string|null
      */
@@ -422,7 +444,7 @@ class Mysql
     }
 
     /**
-     * Возвращает массив со всеми исполненными SQL-запросами в рамках текущего объекта.
+     * Returns an array containing all executed SQL queries within the current connection.
      *
      * @return array
      */
@@ -432,7 +454,7 @@ class Mysql
     }
 
     /**
-     * Возвращает id, сгенерированный предыдущей операцией INSERT.
+     * Returns the id generated by the previous INSERT operation.
      *
      * @return int
      * @see mysqli::insert_id
@@ -443,7 +465,7 @@ class Mysql
     }
 
     /**
-     * Возвращает оригинальный объект mysqli.
+     * Returns the original mysqli object.
      *
      * @return mysqli
      */
@@ -463,9 +485,16 @@ class Mysql
     public function __sleep()
     {
         return [
-            'server', 'user', 'password', 'port', 'socket',
+            'server',
+            'user',
+            'password',
+            'port',
+            'socket',
             'database_name',
-            'type_mode', 'store_queries', 'query', 'original_query'
+            'type_mode',
+            'store_queries',
+            'query',
+            'original_query'
         ];
     }
 
@@ -504,7 +533,7 @@ class Mysql
     }
 
     /**
-     * Устанавливает соединение с базой данных.
+     * Establishes a connection to the database.
      *
      * @return $this
      * @throws MySqlException
@@ -527,7 +556,8 @@ class Mysql
                     $this->port,
                     $this->socket
                 );
-            } catch (\mysqli_sql_exception $mysqli_sql_exception) {}
+            } catch (mysqli_sql_exception $mysqli_sql_exception) {
+            }
 
             // Выявляем источник данных об ошибке
             $error_code = $mysqli_sql_exception ? $mysqli_sql_exception->getCode() : $this->mysqli->connect_errno;
@@ -535,9 +565,13 @@ class Mysql
 
             if ($error_code && $error_message) {
                 $this->mysqli = null;
-                throw new MySqlException(sprintf(
-                    $this->i18n_error_messages[$this->lang][11], __METHOD__, $error_message
-                ), $error_code, $mysqli_sql_exception);
+                throw new MySqlException(
+                    sprintf(
+                        $this->i18n_error_messages[$this->lang][11],
+                        __METHOD__,
+                        $error_message
+                    ), $error_code, $mysqli_sql_exception
+                );
             }
         }
 
@@ -545,25 +579,24 @@ class Mysql
     }
 
     /**
-     * Закрывает MySQL-соединение.
+     * Closes the MySQL connection.
      *
      * @return void
      * @see mysqli::close
      */
     private function close(): void
     {
-        if (is_object($this->mysqli) && $this->mysqli instanceof mysqli) {
+        if ($this->mysqli instanceof mysqli) {
             $this->mysqli->close();
         }
-
     }
 
     /**
-     * Возвращает экранированную строку для placeholder-а поиска LIKE (?S).
+     * Returns an escaped string for a LIKE search placeholder (?S).
      *
-     * @param string $string строка в которой необходимо экранировать спец. символы
-     * @param string $chars набор символов, которые так же необходимо экранировать.
-     *                      По умолчанию экранируются следующие символы: `'"%_`.
+     * @param string $string the line in which special characters need to be escaped
+     * @param string $chars a set of characters that also need to be escaped.
+     * By default, the following characters are escaped: `'"%_`.
      * @return string
      */
     private function escapeLike(string $string, string $chars = "%_"): string
@@ -579,39 +612,44 @@ class Mysql
     }
 
     /**
-     * Экранирует специальные символы в строке для использования в SQL выражении,
-     * используя текущий набор символов соединения.
+     * Escapes special characters in a string for use in a SQL expression,
+     * using the current connection character set.
      *
-     * @see mysqli_real_escape_string
-     * @param string
+     * @param string $value
      * @return string
+     * @see mysqli_real_escape_string
      * @see mysqli::real_escape_string
      */
-    private function mysqlRealEscapeString($value): string
+    private function mysqlRealEscapeString(string $value): string
     {
         return $this->mysqli->real_escape_string($value);
     }
 
     /**
-     * Возвращает строку описания ошибки при несовпадении типов заполнителей и аргументов.
+     * Returns a string describing the error when the placeholder and argument types do not match.
      *
-     * @param string $type тип заполнителя
-     * @param mixed $value значение аргумента
-     * @param string $original_query оригинальный SQL-запрос
+     * @param string $type filler type
+     * @param mixed $value argument value
+     * @param string $original_query original sql query
      * @return string
      */
     private function createErrorMessage(string $type, mixed $value, string $original_query): string
     {
-        return sprintf($this->i18n_error_messages[$this->lang][6], $type, gettype($value), $original_query);
+        return sprintf(
+            $this->i18n_error_messages[$this->lang][6],
+            $type,
+            gettype($value),
+            $original_query
+        );
     }
 
     /**
-     * Парсит запрос $query и подставляет в него аргументы из $args.
+     * Parses the $query and substitutes the arguments from $args into it.
      *
-     * @param string $query SQL запрос или его часть (в случае парсинга условия в скобках [])
-     * @param array $args аргументы заполнителей
-     * @param string|null $original_query "оригинальный", полный SQL-запрос
-     * @return string SQL запрос для исполнения СУБД
+     * @param string $query SQL query or part of it (in case of parsing the condition in brackets [])
+     * @param array $args placeholder arguments
+     * @param string|null $original_query "original", full SQL query
+     * @return string SQL query for database execution
      * @throws MySqlException
      */
     private function parse(string $query, array $args, ?string $original_query = null): string
@@ -626,15 +664,19 @@ class Mysql
             $placeholder_type = mb_substr($query, $posQM + 1, 1);
 
             // Любые ситуации с нахождением знака вопроса, который не является заполнителем.
-            if ($placeholder_type == '' || !in_array($placeholder_type, array('i', 'd', 's', 'S', 'n', 'A', 'a', 'f'))) {
+            if (!in_array($placeholder_type, ['i', 'd', 's', 'S', 'n', 'A', 'a', 'f'])) {
                 $offset += 1;
                 continue;
             }
 
             if (!$args) {
-                throw new MySqlException(sprintf(
-                    $this->i18n_error_messages[$this->lang][7], __METHOD__, $original_query
-                ));
+                throw new MySqlException(
+                    sprintf(
+                        $this->i18n_error_messages[$this->lang][7],
+                        __METHOD__,
+                        $original_query
+                    )
+                );
             }
 
             $value = array_shift($args);
@@ -652,7 +694,9 @@ class Mysql
                 // для bool, null и numeric типа.
                 case 's':
                     $value = $this->getValueStringType($value, $original_query);
-                    $value = !empty($is_like_escaping) ? $this->escapeLike($value) : $this->mysqlRealEscapeString($value);
+                    $value = !empty($is_like_escaping) ? $this->escapeLike($value) : $this->mysqlRealEscapeString(
+                        $value
+                    );
                     $query = static::mb_substr_replace($query, $value, $posQM, 2);
                     $offset += mb_strlen($value);
                     break;
@@ -702,26 +746,30 @@ class Mysql
 
                     if ($next_char != '' && preg_match('#[sid\[]#u', $next_char, $matches)) {
                         // Парсим выражение вида ?a[?i, "?s", "?s"]
-                        if ($next_char == '[' and ($close = mb_strpos($query, ']', $posQM+3)) !== false) {
+                        if ($next_char == '[' and ($close = mb_strpos($query, ']', $posQM + 3)) !== false) {
                             // Выражение между скобками [ и ]
-                            $array_parse = mb_substr($query, $posQM+3, $close - ($posQM+3));
+                            $array_parse = mb_substr($query, $posQM + 3, $close - ($posQM + 3));
                             $array_parse = trim($array_parse);
                             $placeholders = array_map('trim', explode(',', $array_parse));
 
                             if (count($value) != count($placeholders)) {
-                                throw new MySqlException(sprintf(
-                                    $this->i18n_error_messages[$this->lang][8], $original_query, implode('", "', $value)
-                                ));
+                                throw new MySqlException(
+                                    sprintf(
+                                        $this->i18n_error_messages[$this->lang][8],
+                                        $original_query,
+                                        implode('", "', $value)
+                                    )
+                                );
                             }
 
                             reset($value);
                             reset($placeholders);
 
-                            $replacements = array();
+                            $replacements = [];
 
                             $i = 0;
                             foreach ($value as $key => $val) {
-                                $replacements[$key] = $this->parse($placeholders[$i], array($val), $original_query);
+                                $replacements[$key] = $this->parse($placeholders[$i], [$val], $original_query);
                                 $i++;
                             }
 
@@ -743,37 +791,38 @@ class Mysql
                                 4 + mb_strlen($array_parse)
                             );
                             $offset += mb_strlen($value);
-                        }
-                        // Выражение вида ?ai, ?as, ?ad
-                        else if (preg_match('#[sid]#u', $next_char, $matches)) {
-                            $parts = array();
+                        } // Выражение вида ?ai, ?as, ?ad
+                        else {
+                            if (preg_match('#[sid]#u', $next_char, $matches)) {
+                                $parts = [];
 
-                            foreach ($value as $key => $val) {
-                                switch ($matches[0]) {
-                                    case 's':
-                                        $val = $this->getValueStringType($val, $original_query);
-                                        $val = $this->mysqlRealEscapeString($val);
-                                        break;
-                                    case 'i':
-                                        $val = $this->getValueIntType($val, $original_query);
-                                        break;
-                                    case 'd':
-                                        $val = $this->getValueFloatType($val, $original_query);
-                                        break;
+                                foreach ($value as $key => $val) {
+                                    switch ($matches[0]) {
+                                        case 's':
+                                            $val = $this->getValueStringType($val, $original_query);
+                                            $val = $this->mysqlRealEscapeString($val);
+                                            break;
+                                        case 'i':
+                                            $val = $this->getValueIntType($val, $original_query);
+                                            break;
+                                        case 'd':
+                                            $val = $this->getValueFloatType($val, $original_query);
+                                            break;
+                                    }
+
+                                    if (!empty($is_associative_array)) {
+                                        $parts[] = $this->escapeFieldName($key, $original_query) . ' = "' . $val . '"';
+                                    } else {
+                                        $parts[] = '"' . $val . '"';
+                                    }
                                 }
 
-                                if (!empty($is_associative_array)) {
-                                    $parts[] = $this->escapeFieldName($key, $original_query) . ' = "' . $val . '"';
-                                } else {
-                                    $parts[] = '"' . $val . '"';
-                                }
+                                $value = implode(', ', $parts);
+                                $value = $value !== '' ? $value : 'NULL';
+
+                                $query = static::mb_substr_replace($query, $value, $posQM, 3);
+                                $offset += mb_strlen($value);
                             }
-
-                            $value = implode(', ', $parts);
-                            $value = $value !== '' ? $value : 'NULL';
-
-                            $query = static::mb_substr_replace($query, $value, $posQM, 3);
-                            $offset += mb_strlen($value);
                         }
                     } else {
                         throw new MySqlException(
@@ -789,8 +838,7 @@ class Mysql
     }
 
     /**
-     * В зависимости от типа режима возвращает либо строковое значение $value,
-     * либо кидает исключение.
+     * Depending on the mode type, returns either the string value $value, or throws an exception.
      *
      * @param mixed $value
      * @param string $original_query
@@ -812,7 +860,7 @@ class Mysql
 
         // меняем поведение PHP в отношении приведения bool к string
         if (is_bool($value)) {
-            return (string) (int) $value;
+            return (string)(int)$value;
         }
 
         if (!is_string($value) && !(is_numeric($value) || is_null($value))) {
@@ -821,12 +869,12 @@ class Mysql
             );
         }
 
-        return (string) $value;
+        return (string)$value;
     }
 
     /**
-     * В зависимости от типа режима возвращает либо строковое значение числа $value,
-     * приведенного к типу int, либо кидает исключение.
+     * Depending on the mode type, returns either the string value of the number $value,
+     * cast to type int, or throws an exception.
      *
      * @param mixed $value
      * @param string $original_query
@@ -842,11 +890,12 @@ class Mysql
         switch ($this->type_mode) {
             case self::MODE_TRANSFORM:
                 if ($this->isFloat($value) || is_null($value) || is_bool($value)) {
-                    return (int) $value;
+                    return (int)$value;
                 }
 
             case self::MODE_STRICT:
-                // Если это числовой string, меняем его тип для вывода в тексте исключения его типа.
+                // Если передали float в виде строки, то поменяем его на реальный тип float,
+                // что бы в сообщении об ошибке корректно отображалась причина.
                 if ($this->isFloat($value)) {
                     $value += 0;
                 }
@@ -857,16 +906,15 @@ class Mysql
     }
 
     /**
-     * В зависимости от типа режима возвращает либо строковое значение числа $value,
-     * приведенного к типу float, либо кидает исключение.
+     * Depending on the mode type, returns either the string value of the number $value,
+     * cast to float, or throws an exception.
      *
-     * Внимание! Разделитель целой и дробной части, возвращаемый float, может не совпадать с разделителем СУБД.
-     * Для установки необходимого разделителя дробной части используйте setlocale().
-     *
-     * @param mixed $value
+     * Warning! The decimal separator returned by float may not match the DBMS separator.
+     * To set the required decimal separator, use @param mixed $value
      * @param string $original_query
      * @return mixed
      * @throws MySqlException
+     * @see setlocale
      */
     private function getValueFloatType(mixed $value, string $original_query): mixed
     {
@@ -877,11 +925,12 @@ class Mysql
         switch ($this->type_mode) {
             case self::MODE_TRANSFORM:
                 if ($this->isInteger($value) || is_null($value) || is_bool($value)) {
-                    return (float) $value;
+                    return (float)$value;
                 }
 
             case self::MODE_STRICT:
-                // Если это числовой string, меняем его тип на int для вывода в тексте исключения.
+                // Если передали int в виде строки, то поменяем его на реальный тип int,
+                // что бы в сообщении об ошибке корректно отображалась причина.
                 if ($this->isInteger($value)) {
                     $value += 0;
                 }
@@ -892,8 +941,7 @@ class Mysql
     }
 
     /**
-     * В зависимости от типа режима возвращает либо строковое значение 'NULL',
-     * либо кидает исключение.
+     * Depending on the mode type, returns either the string value 'NULL', or throws an exception.
      *
      * @param mixed $value
      * @param string $original_query
@@ -917,10 +965,10 @@ class Mysql
     }
 
     /**
-     * Всегда генерирует исключение, если $value не является массивом.
-     * Первоначально была идея в режиме self::MODE_TRANSFORM приводить к типу array
-     * скалярные данные, но на данный момент я считаю это излишним послаблением для клиентов,
-     * которые будут использовать данный класс.
+     * Always throws an exception if $value is not an array.
+     * The original idea was to cast scalar data to array
+     * type in self::MODE_TRANSFORM mode, but at the moment I consider this an
+     * unnecessary concession for clients who will use this class.
      *
      * @param mixed $value
      * @param string $original_query
@@ -939,7 +987,7 @@ class Mysql
     }
 
     /**
-     * Экранирует имя поля таблицы или столбца.
+     * Escapes the name of a table field or column.
      *
      * @param mixed $value
      * @param string $original_query
@@ -956,7 +1004,7 @@ class Mysql
 
         $new_value = '';
 
-        $replace = function($value){
+        $replace = function ($value) {
             return '`' . str_replace("`", "``", $value) . '`';
         };
 
@@ -986,10 +1034,10 @@ class Mysql
     }
 
     /**
-     * Проверяет, является ли значение целым числом, умещающимся в диапазон PHP_INT_MAX.
+     * Checks if a value is an integer.
      *
      * @param mixed $val
-     * @return boolean
+     * @return bool
      */
     private function isInteger(mixed $val): bool
     {
@@ -1001,10 +1049,10 @@ class Mysql
     }
 
     /**
-     * Проверяет, является ли значение числом с плавающей точкой.
+     * Checks if a value is a floating point number.
      *
      * @param mixed $val
-     * @return boolean
+     * @return bool
      */
     private function isFloat(mixed $val): bool
     {
@@ -1016,20 +1064,25 @@ class Mysql
     }
 
     /**
-     * Заменяет часть строки string, начинающуюся с символа с порядковым номером start
-     * и (необязательной) длиной length, строкой replacement и возвращает результат.
+     * Replaces the portion of string starting with the character with ordinal number start
+     * and (optional) length with the string replacement and returns the result.
      *
-     * @see substr_replace
-     * @param $string
-     * @param $replacement
-     * @param $start
-     * @param null $length
-     * @param null $encoding
+     * @param string $string
+     * @param string $replacement
+     * @param int $start
+     * @param int|null $length
+     * @param string|null $encoding
      * @return string
+     * @see substr_replace
      */
-    private static function mb_substr_replace($string, $replacement, $start, $length = null, $encoding = null): string
-    {
-        if ($encoding == null) {
+    private static function mb_substr_replace(
+        string $string,
+        string $replacement,
+        int $start,
+        int $length = null,
+        ?string $encoding = null
+    ): string {
+        if (!$encoding) {
             $encoding = mb_internal_encoding();
         }
 

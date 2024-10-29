@@ -1,80 +1,98 @@
 <?php
-foreach (glob(dirname(dirname(__FILE__)) . "/src/*.php") as $filename) {
-    require_once $filename;
-}
-
-// Это файл для понимания сути работы. Вы можете запускать его много раз из консоли.
-// Не забудьте создать базу данных с именем `test`.
 
 use Krugozor\Database\Mysql;
 use Krugozor\Database\Statement;
 use Krugozor\Database\MySqlException;
 
-// В случае, как и с \mysqli вы можете не указывать параметры подключения в конструкторе,
-// а положиться на конфигурацию mysqli (https://www.php.net/manual/ru/mysqli.configuration.php), т.е.:
+// This is a file to understand the essence of the library. You can run it many times from the console.
+
+foreach (glob(dirname(dirname(__FILE__)) . "/src/*.php") as $filename) {
+    require_once $filename;
+}
+
+// Your data for connecting to the MYSQL server
+const MYSQL_SERVER = 'localhost';
+const MYSQL_USER = 'root';
+const MYSQL_PASSWORD = '';
+const MYSQL_PORT = 3306;
+// The test will create a database.
+// Make sure your mysql user has the rights to create databases and tables (CREATE privilege)
+// https://dev.mysql.com/doc/refman/8.4/en/privileges-provided.html#priv_create
+const TEMPORARY_DATABASE_NAME = 'krugozor_database_test';
+
+// In the same case as with \mysqli, you can not specify the connection parameters in the constructor,
+// but rely on the mysqli configuration (https://www.php.net/manual/ru/mysqli.configuration.php), i.e.:
 // ini_set('mysqli.default_host', 'localhost');
 // ini_set('mysqli.default_user', 'root');
-// ini_set('mysqli.default_pw', 'root');
+// ini_set('mysqli.default_pw', '');
 // ini_set('mysqli.default_port', 3306);
 // ini_set('mysqli.default_socket', null);
 
 try {
-    $db = Mysql::create('localhost', 'root', 'root');
+    $db = Mysql::create(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_PORT);
 
     $db
-        // Язык вывода ошибок - русский
+        // Error output language
         ->setErrorMessagesLang('ru')
-        // Выбор базы данных
-        ->setDatabaseName("test")
-        // Выбор кодировки
+        // Setting the encoding
         ->setCharset("utf8")
-        // Включим хранение исполненных запросов для отчета/отладки/статистики
-        ->setStoreQueries(true);
+        // Enable storage of executed queries for reporting/debugging/statistics
+        ->setStoreQueries(true)
+        // Create testing database...
+        ->query('CREATE DATABASE IF NOT EXISTS ?f', TEMPORARY_DATABASE_NAME);
+    // ...use this database
+    $db->setDatabaseName(TEMPORARY_DATABASE_NAME);
 
-    // Наглядный пример двух режимов работы библиотеки:
 
-    // 1. Режим Mysql::MODE_TRANSFORM
+    // A clear example of two modes of library operation:
+
+    // 1. Mysql::MODE_TRANSFORM mode
     $db->setTypeMode(Mysql::MODE_TRANSFORM);
 
-    // Результат: 8 - простое сложение двух integer
+    // Result: 8 - simple addition of two integers
     $result = $db->query('SELECT ?i + ?i', 3, 5);
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
 
-    // Результат: так же 8, т.к. значение 3.5 было приведено к типу int,
-    // поскольку по-умолчанию активирован режим Mysql::MODE_TRANSFORM
-    // и значение 3.5 было приведено к типу int посредством самого языка php
+    // Result: also 8, because the value 3.5 was cast to type int,
+    // because the Mysql::MODE_TRANSFORM mode is activated by default
+    // and the value 3.5 was cast to type int by the PHP language itself
     $result = $db->query('SELECT ?i + ?i', 3.5, 5);
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
 
-    // Результат: 1, т.к. значение null приведено к 0, true - к 1
+    // Result: 1, because null is cast to 0, true is cast to 1
     $result = $db->query('SELECT ?i + ?i', null, true);
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
 
+    // Result: SELECT "0", "", "0.001"
     $result = $db->query('SELECT "?s", "?s", "?s"', false, null, 0.001);
     echo "{$db->getQueryString()}" . PHP_EOL;
     echo PHP_EOL;
 
-    // Активируем строгий режим типизации.
+
+    // 2. Mysql::MODE_STRICT mode
     $db->setTypeMode(Mysql::MODE_STRICT);
 
-    // Результат: 8.5
+    // Result: 8.5
     $result = $db->query('SELECT ?d + ?i', 3.5, 5);
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
 
-    // Результат: 8.5, не смотря на режим Mysql::MODE_STRICT, строки и числа в аргументах
-    // интерпретируются библиотекой правильно, так как они представляют собой числа с плавающей точкой
-    $result = $db->query('SELECT ?d + ?i', '3.5', '5');
+    // Result: 8.5, despite the Mysql::MODE_STRICT mode, strings and numbers in the arguments
+    // are interpreted correctly by the library, since they are floating-point numbers
+    $result = $db->query('SELECT ?d + ?i', '3.5', 5);
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
     echo PHP_EOL;
 
-    // А в строгом режиме уже такие фокусы не пройдут:
-    // $db->query('SELECT "?s"', false);
-    // будет выброшено исключение:
-    // `Попытка указать для заполнителя типа string значение типа boolean в шаблоне запроса SELECT "?s"`
+    // In Mysql::MODE_STRICT mode such tricks will not work, an exception with the error will be thrown
+    try {
+        $db->query('SELECT "?i", "?i", "?s"', '33.5', 12.1, false);
+    } catch (MysqlException $e) {
+        echo $e->getMessage() . PHP_EOL . PHP_EOL;
+    }
 
-    // Примеры со вставкой и выборкой:
 
-    // Создание таблицы
+    // Examples with insertion and selection of data:
+
+    // Creating a table
     $db->query('
         CREATE TABLE IF NOT EXISTS test (
             id int unsigned not null primary key auto_increment,
@@ -82,69 +100,76 @@ try {
             age int not null
         );
     ');
-    // Очистим её, т.к. возможно вы будете запускать этот скрипт неоднократно.
-    $db->query('TRUNCATE TABLE `test`;');
-    // Вернем режим работы Mysql::MODE_TRANSFORM
+    // Let's clear it, because you might run this script more than once.
+    $db->query('TRUNCATE TABLE `test`');
+    // Let's return the operating mode Mysql::MODE_TRANSFORM
     $db->setTypeMode(Mysql::MODE_TRANSFORM);
 
-    // Вставка данных различными методами:
 
-    // Простая вставка данных через заполнители разных типов:
-    $db->query("INSERT INTO `test` VALUES (null, '?s', ?i)", 'Иоанн Грозный', '54');
-    echo "{$db->getQueryString()} (вставлено рядов: {$db->getAffectedRows()})" . PHP_EOL;
+    // Inserting data using different methods:
 
-    // Вставка значений через заполнитель ассоциативного множества типа string:
-    $data = array('name' => "Д'Артаньян", 'age' => '19');
+    // Easy data insertion through different types of placeholders:
+    $db->query("INSERT INTO `test` VALUES (null, '?s', ?i)", 'Ivan the Terrible', '54');
+    echo "{$db->getQueryString()} (inserted rows: {$db->getAffectedRows()})" . PHP_EOL;
+
+    // Inserting values via an associative set placeholder of type 'string':
+    $data = ['name' => "D'Artagnan", 'age' => '19'];
     $db->query('INSERT INTO `test` SET ?As', $data);
-    echo "{$db->getQueryString()} (вставлено рядов: {$db->getAffectedRows()})" . PHP_EOL;
+    echo "{$db->getQueryString()} (inserted rows: {$db->getAffectedRows()})" . PHP_EOL;
 
-    // Вставка значений через заполнитель ассоциативного множества с явным
-    // указанием типа и количества аргументов:
-    $data = array('name' => "%%% Иосиф Сталин %%%", 'age' => '56');
+    // Inserting values via an associative set placeholder with explicitly
+    // specifying the type and number of arguments:
+    $data = ['name' => "%%% Joseph Stalin %%%", 'age' => '56'];
     $db->query('INSERT INTO `test` SET ?A["?s", ?i]', $data);
-    echo "{$db->getQueryString()} (вставлено рядов: {$db->getAffectedRows()})" . PHP_EOL;
+    echo "{$db->getQueryString()} (inserted rows: {$db->getAffectedRows()})" . PHP_EOL;
     echo PHP_EOL;
 
-    // Выборки:
 
-    // Обычная выборка:
-    $result = $db->query('SELECT `name` FROM `test` WHERE `name` = "?s"', "Д'Артаньян");
+    // Data selection:
+
+    // Simple data selection:
+    $result = $db->query('SELECT `name` FROM `test` WHERE `name` = "?s"', "D'Artagnan");
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
 
-    // Обычная выборка, но имя полей и базы_данных.таблицы так же передаем через заполнитель:
-    $result = $db->query('SELECT ?f FROM ?f WHERE ?f = "?s"', 'name', 'test.test', 'id', 1);
+    // A normal selection, but the name of the fields and table is also passed through the placeholder:
+    $result = $db->query(
+        'SELECT ?f FROM ?f WHERE ?f = "?s"',
+        'name', TEMPORARY_DATABASE_NAME . '.test', 'id', 1
+    );
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
 
-    // LIKE-поиск. Обратите внимание, что в имени Сталина присутствует спецсимвол % -
-    // он будет корректно экранирован:
+    // LIKE search. Please note that the special character % is intentionally present in the name
+    // of Joseph Stalin - it will be correctly escaped:
     $result = $db->query('SELECT `name` FROM `test` WHERE `name` LIKE "%?S%"', "%");
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
     echo PHP_EOL;
 
-    // Заполнитель null-типа игнорирует аргумент:
+    // The null-type placeholder ignores the argument:
     $result = $db->query('SELECT ?n', 123);
     echo "{$db->getQueryString()} ({$result->getOne()})" . PHP_EOL;
     echo PHP_EOL;
 
-    // Применение метода queryArguments() - аргументы передаются в виде массива.
-    //Это второй, после метода query(), метод запросов в базу:
+    // Using the queryArguments() method - arguments are passed as an array.
+    // This is the second method for querying the database after the query() method:
     $sql = 'SELECT * FROM `test` WHERE `name` like "%?s%" OR `name` = "?s"';
-    $arguments[] = "Сталин";
-    $arguments[] = "Д'Артаньян";
+    $arguments[] = "Stalin";
+    $arguments[] = "D'Artagnan";
     $result = $db->queryArguments($sql, $arguments);
-    // Получим количество рядов в результате
-    echo "{$db->getQueryString()} (получено рядов: {$result->getNumRows()}):" . PHP_EOL;
+    echo "{$db->getQueryString()} (inserted rows: {$result->getNumRows()}):" . PHP_EOL;
     foreach ($result->fetchAssocArray() as $data) {
         print_r($data);
     }
     echo PHP_EOL;
 
-    // Получим все исполненные запросы текущего соединения:
+    // Let's get all executed requests of the current connection:
     print_r($db->getQueries());
     echo PHP_EOL;
 
-    // Совершим ошибку - будет исключение типа MySqlException.
-    $db->query('SELECT * FROM `not_exists_table`');
+    // Let's delete the test database:
+    $db->query('DROP DATABASE ?f', TEMPORARY_DATABASE_NAME);
+
+    echo $db->query('SELECT "Good by!"')->getOne();
+    echo PHP_EOL;
 } catch (MySqlException $e) {
-    echo "Исключение: " . $e->getMessage() . PHP_EOL;
+    echo "Exception: " . $e->getMessage() . PHP_EOL;
 }

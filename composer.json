@@ -27,8 +27,7 @@
   },
   "authors": [
     {
-      "name": "Vasiliy Makogon",
-      "email": "makogon-vs@yandex.ru"
+      "name": "Vasiliy Makogon"
     }
   ],
   "autoload": {

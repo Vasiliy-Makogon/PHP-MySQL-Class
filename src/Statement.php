@@ -2,27 +2,30 @@
 
 namespace Krugozor\Database;
 
+use mysqli_result;
+use stdClass;
+
 /**
- * @author Vasiliy Makogon, makogon-vs@yandex.ru
+ * @author Vasiliy Makogon
  * @link https://github.com/Vasiliy-Makogon/Database/
  */
 class Statement
 {
     /**
-     * @var \mysqli_result
+     * @var mysqli_result
      */
-    protected \mysqli_result $mysqli_result;
+    protected mysqli_result $mysqli_result;
 
     /**
-     * @param \mysqli_result
+     * @param mysqli_result $mysqli_result
      */
-    public function __construct(\mysqli_result $mysqli_result)
+    public function __construct(mysqli_result $mysqli_result)
     {
         $this->mysqli_result = $mysqli_result;
     }
 
     /**
-     * Извлекает результирующий ряд в виде ассоциативного массива.
+     * Retrieves the resulting row as an associative array.
      *
      * @return array|null
      */
@@ -32,7 +35,7 @@ class Statement
     }
 
     /**
-     * Извлекает результирующий ряд в виде массива.
+     * Retrieves the resulting row as an array.
      *
      * @return array|null
      */
@@ -42,17 +45,17 @@ class Statement
     }
 
     /**
-     * Извлекает результирующий ряд в виде объекта.
+     * Retrieves the resulting row as an object.
      *
-     * @return \stdClass|null
+     * @return stdClass|null
      */
-    public function fetchObject(): ?\stdClass
+    public function fetchObject(): ?stdClass
     {
         return $this->mysqli_result->fetch_object();
     }
 
     /**
-     * Возвращает результат в виде массива ассоциативных массивов.
+     * Returns the result as an array of associative arrays.
      *
      * @return array
      */
@@ -68,7 +71,7 @@ class Statement
     }
 
     /**
-     * Возвращает результат в виде массива массивов.
+     * Returns the result as an array of arrays.
      *
      * @return array
      */
@@ -84,7 +87,7 @@ class Statement
     }
 
     /**
-     * Возвращает результат в виде массива объектов \stdClass.
+     * Returns the result as an array of \stdClass objects.
      *
      * @return array
      */
@@ -100,7 +103,7 @@ class Statement
     }
 
     /**
-     * Возвращает значение первого поля результирующей таблицы.
+     * Returns the value of the first field of the resulting table.
      *
      * @return string|null
      */
@@ -114,11 +117,11 @@ class Statement
     }
 
     /**
-     * Возвращает количество рядов в результате.
-     * Эта команда верна только для операторов SELECT.
+     * Returns the number of rows in the result.
+     * This command is only valid for SELECT statements.
      *
-     * @see mysqli_num_rows
      * @return int
+     *@see mysqli_num_rows
      */
     public function getNumRows(): int
     {
@@ -126,21 +129,21 @@ class Statement
     }
 
     /**
-     * Возвращает объект результата \mysqli_result.
+     * Returns a mysqli_result object.
      *
-     * @return \mysqli_result
+     * @return mysqli_result
      */
-    public function getResult(): \mysqli_result
+    public function getResult(): mysqli_result
     {
         return $this->mysqli_result;
     }
 
     /**
-     * Освобождает память занятую результатами запроса.
+     * Frees memory occupied by query results.
      *
      * @return void
      */
-    public function free()
+    public function free(): void
     {
         $this->mysqli_result->free();
     }

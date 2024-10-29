@@ -118,7 +118,7 @@ SQL injections.
 The types of placeholders and their purpose are described below. Before getting acquainted with placeholder types, it is necessary to understand how the mechanism of the `krugozor/database` library works. Example:
 
 ```php
- $db->query("SELECT ?i", 123); 
+ $db->query("SELECT ?i", 123);
 ```
 SQL query after template conversion:
 ```sql
@@ -129,7 +129,7 @@ During the execution of this command *the library checks if the argument `123` i
 Since PHP is a weakly typed language, the above expression is equivalent to the following:
 
 ```php
- $db->query("SELECT ?i", '123'); 
+ $db->query("SELECT ?i", '123');
  ```
 SQL query after template conversion:
  ```sql
@@ -182,7 +182,7 @@ $db->query('SELECT ?i', 55.5);
 #### `?i` — integer placeholder
 
 ```php
-$db->query('SELECT * FROM `users` WHERE `id` = ?i', $_POST['user_id']); 
+$db->query('SELECT * FROM `users` WHERE `id` = ?i', $_POST['user_id']);
 ```
 
 **ATTENTION!** If you operate on numbers that are outside the limits of `PHP_INT_MAX`, then:
@@ -196,7 +196,7 @@ $db->query('SELECT * FROM `users` WHERE `id` = ?i', $_POST['user_id']);
 #### `?d` — floating point placeholder
 
 ```php
-$db->query('SELECT * FROM `prices` WHERE `cost` = ?d', 12.56); 
+$db->query('SELECT * FROM `prices` WHERE `cost` = ?d', 12.56);
 ```
 
 **ATTENTION!** If you are using a library to work with the `double` data type, set the appropriate locale so that
@@ -221,7 +221,7 @@ SELECT "You are all fools, and I am d\'Artagnan!"
 Argument values are escaped using the `mysqli::real_escape_string()` method + escaping special characters used in the LIKE operator (`%` and `_`):
 
 ```php
- $db->query('SELECT "?S"', '% _'); 
+ $db->query('SELECT "?S"', '% _');
  ```
 
 SQL query after template conversion:
@@ -235,7 +235,7 @@ SQL query after template conversion:
 The value of any arguments is ignored, placeholders are replaced with the string `NULL` in the SQL query:
 
 ```php
- $db->query('SELECT ?n', 123); 
+ $db->query('SELECT ?n', 123);
  ```
 
 SQL query after template conversion:
@@ -342,4 +342,4 @@ For those who are used to working with PDO, this will seem strange, but implemen
 
 ## Examples of working with the library
 
-in the process....
+See in file [./console/tests.php](./console/tests.php)
