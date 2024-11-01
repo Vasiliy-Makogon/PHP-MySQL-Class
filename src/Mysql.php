@@ -12,7 +12,7 @@ use mysqli_sql_exception;
  */
 class Mysql
 {
-    /** @var int Strict working hours */
+    /** @var int Strict operating mode */
     public const MODE_STRICT = 1;
 
     /** @var int Tolerant operating mode */

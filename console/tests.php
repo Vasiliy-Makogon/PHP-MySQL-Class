@@ -33,7 +33,7 @@ try {
 
     $db
         // Error output language
-        ->setErrorMessagesLang('ru')
+        ->setErrorMessagesLang('en')
         // Setting the encoding
         ->setCharset("utf8")
         // Enable storage of executed queries for reporting/debugging/statistics
@@ -45,6 +45,7 @@ try {
 
 
     // A clear example of two modes of library operation:
+
 
     // 1. Mysql::MODE_TRANSFORM mode
     $db->setTypeMode(Mysql::MODE_TRANSFORM);
@@ -100,8 +101,7 @@ try {
             age int not null
         );
     ');
-    // Let's clear it, because you might run this script more than once.
-    $db->query('TRUNCATE TABLE `test`');
+
     // Let's return the operating mode Mysql::MODE_TRANSFORM
     $db->setTypeMode(Mysql::MODE_TRANSFORM);
 

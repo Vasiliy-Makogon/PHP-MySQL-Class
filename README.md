@@ -2,7 +2,7 @@
 
 ---
 
-## ![](https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/23px-Flag_of_the_United_Kingdom.svg.png) Getting the Library
+## ![](https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/23px-Flag_of_the_United_Kingdom.svg.png) Getting the Library ![](https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/23px-Flag_of_the_United_Kingdom.svg.png)
 
 You can [download it as an archive](https://github.com/Vasiliy-Makogon/Database/archive/master.zip), clone from this
 site, or download via composer ([link to packagist.org](https://packagist.org/packages/krugozor/database)):
@@ -62,39 +62,15 @@ MySQL DBMS - and no more!
 
 ## What are placeholders?
 
-**Placeholders** — special *typed markers* that are written in the SQL query string *instead of
-explicit values (query parameters)*. And the values themselves are passed "later", as subsequent arguments to the main
+**Placeholders** — **special *typed markers* that are written in the SQL query string *instead of
+explicit values (query parameters)***. And the values themselves are passed "later", as subsequent arguments to the main
 a method that executes a SQL query:
 
 ```php
-<?php
-// Let's assume you installed the library via composer
-require  './vendor/autoload.php';
-
-use Krugozor\Database\Mysql;
-
-// Connecting to a DBMS and getting a "wrapper" object over mysqli - \Krugozor\Database\Mysql
-$db = Mysql::create("localhost", "root", "password")
-      // Error output language - English
-      ->setErrorMessagesLang('en')
-      // Database selection
-      ->setDatabaseName("test")
-      // Encoding selection
-      ->setCharset("utf8")
-      // Enable storage of all SQL queries for reporting/debugging/statistics
-      ->setStoreQueries(true);
-
-// Getting a result object \Krugozor\Database\Statement
-// \Krugozor\Database\Statement - "wrapper" over an object mysqli_result
-$result = $db->query("SELECT * FROM `users` WHERE `name` = '?s' AND `age` = ?i", "d'Artagnan", 41);
-
-// We receive data (in the form of an associative array, for example)
-$data = $result->fetchAssoc();
-
-// SQL query not working as expected?
-// Not a problem - print it and see the generated SQL query,
-// which will already be with the parameters substituted into its body:
-echo $db->getQueryString(); // SELECT * FROM `users` WHERE `name` = 'd\'Artagnan' AND `age` = 41
+$result = $db->query(
+    "SELECT * FROM `users` WHERE `name` = '?s' AND `age` = ?i",
+    "d'Artagnan", 41
+);
 ```
 
 SQL query parameters passed through the *placeholders* system are processed by special escaping mechanisms, in
@@ -115,42 +91,44 @@ SQL injections.
 
 ### Introduction to placeholder system
 
-The types of placeholders and their purpose are described below. Before getting acquainted with placeholder types, it is necessary to understand how the mechanism of the `krugozor/database` library works. Example:
+The types of fillers and their purposes are described below. Before getting acquainted with the types of fillers, it is necessary to understand how the library mechanism works.
 
-```php
- $db->query("SELECT ?i", 123);
-```
-SQL query after template conversion:
+#### PHP problem
+
+PHP is a weakly typed language and an ideological dilemma arose when developing this library.
+Let's imagine that we have a table with the following structure:
+
 ```sql
-SELECT 123
+`name` varchar not null
+`flag` tinyint not null
 ```
-During the execution of this command *the library checks if the argument `123` is an integer value*. The placeholder `?i` is the character `?` (question mark) and the first letter of the word `integer`. If the argument is indeed an integer data type, then the placeholder `?i` in the SQL query template is replaced with the value `123` and the SQL is passed for execution.
-
-Since PHP is a weakly typed language, the above expression is equivalent to the following:
+and the library MUST (for some reason, possibly beyond the developer's control) execute the following request:
 
 ```php
- $db->query("SELECT ?i", '123');
- ```
-SQL query after template conversion:
- ```sql
- SELECT 123
- ```
+$db->query(
+    "INSERT INTO `t` SET `name` = '?s', `flag` = ?i",
+    null, false
+);
+```
+In this example, an attempt is made to write a `null` value to the `not null` text field `name`, and a `false` boolean type to the `flag` numeric field. What should we do in this situation?
 
-that is, numbers (integer and floating point) represented both in their type and in the form of `string` are equivalent from the point of view of the library.
+* Who should be responsible for validating query parameters - the client code or the library?
+* Should we interrupt program execution in this case, or should we perhaps apply some manipulations so that the data is written to the database?
+* Can we treat the `false` value for the `tinyint` column as the value `0`, and `null` as an empty string for the `name` column?
+* How can we simplify or standardize such problems in our code?
 
+In view of the questions raised, it was decided to implement two operating modes in this library.
 
-### Library Modes and Forced Type Casting
-
-There are two modes of library operation:
+### Library operating modes
 
 * **Mysql::MODE_STRICT - strict match mode for placeholder type and argument type**.
-  In `Mysql::MODE_STRICT` mode, *arguments must match the placeholder type*. For example, an attempt to pass the value `55.5` or `'55.5'` as an argument for an integer placeholder `?i` will result in an exception being thrown:
+  In `Mysql::MODE_STRICT` mode, *the argument type must match the placeholder type*. For example, an attempt to pass the value `55.5` or `'55.5'` as an argument for an integer placeholder `?i` will result in an exception being thrown:
 
 ```php
 // set strict mode
 $db->setTypeMode(Mysql::MODE_STRICT);
 // this expression will not be executed, an exception will be thrown:
-// Trying to set placeholder type "int" to value type "double" in query template "SELECT ?i"
+// attempt to specify a value of type "integer" for placeholder of type "double" in query template "SELECT ?i"
 $db->query('SELECT ?i', 55.5);
 ```
 
@@ -174,7 +152,6 @@ $db->query('SELECT ?i', 55.5);
   * any arguments.
 * For arrays, objects and resources, conversions are not allowed.
 
-**ATTENTION!** The following explanation of the library will go on assuming that the `Mysql::MODE_TRANSFORM` mode is activated.
 
 ### What types of placeholders are provided in the `krugozor/database` library?
 
@@ -182,7 +159,13 @@ $db->query('SELECT ?i', 55.5);
 #### `?i` — integer placeholder
 
 ```php
-$db->query('SELECT * FROM `users` WHERE `id` = ?i', $_POST['user_id']);
+$db->query(
+    'SELECT * FROM `users` WHERE `id` = ?i', 123
+);
+```
+SQL query after template conversion:
+```sql
+SELECT * FROM `users` WHERE `id` = 123
 ```
 
 **ATTENTION!** If you operate on numbers that are outside the limits of `PHP_INT_MAX`, then:
@@ -196,7 +179,14 @@ $db->query('SELECT * FROM `users` WHERE `id` = ?i', $_POST['user_id']);
 #### `?d` — floating point placeholder
 
 ```php
-$db->query('SELECT * FROM `prices` WHERE `cost` = ?d', 12.56);
+$db->query(
+    'SELECT * FROM `prices` WHERE `cost` IN (?d, ?d)',
+    12.56, '12.33'
+);
+```
+SQL query after template conversion:
+```sql
+SELECT * FROM `prices` WHERE `cost` IN (12.56, 12.33)
 ```
 
 **ATTENTION!** If you are using a library to work with the `double` data type, set the appropriate locale so that
@@ -207,8 +197,11 @@ If the separator of the integer and fractional parts were the same both at the P
 The argument values are escaped using the `mysqli::real_escape_string()` method:
 
 ```php
- $db->query('SELECT "?s"', "You are all fools, and I am d'Artagnan!");
- ```
+$db->query(
+    'SELECT "?s"',
+    "You are all fools, and I am d'Artagnan!"
+);
+```
 
 SQL query after template conversion:
 
@@ -221,28 +214,24 @@ SELECT "You are all fools, and I am d\'Artagnan!"
 Argument values are escaped using the `mysqli::real_escape_string()` method + escaping special characters used in the LIKE operator (`%` and `_`):
 
 ```php
- $db->query('SELECT "?S"', '% _');
- ```
-
+$db->query('SELECT "?S"', '% _');
+```
 SQL query after template conversion:
-
- ```sql
- SELECT "\% \_"
- ```
+```sql
+SELECT "\% \_"
+```
 
 #### `?n` — placeholder `NULL` type
 
 The value of any arguments is ignored, placeholders are replaced with the string `NULL` in the SQL query:
 
 ```php
- $db->query('SELECT ?n', 123);
- ```
-
+$db->query('SELECT ?n', 123);
+```
 SQL query after template conversion:
-
- ```sql
- SELECT NULL
- ```
+```sql
+SELECT NULL
+```
 
 #### `?A*` — associative set placeholder from an associative array, generating a sequence of pairs of the form `key = value`
 
@@ -255,11 +244,14 @@ where the character `*` is one of the placeholders:
 the rules for conversion and escaping are the same as for the single scalar types described above. Example:
 
 ```php
-$db->query('INSERT INTO `test` SET ?Ai', ['first' => '123', 'second' => 1.99]);
+$db->query(
+    'INSERT INTO `test` SET ?Ai',
+    ['first' => '123', 'second' => 456]
+);
 ```
 SQL query after template conversion:
 ```sql
-INSERT INTO `test` SET `first` = "123", `second` = "1"
+INSERT INTO `test` SET `first` = "123", `second` = "456"
 ```
 
 #### `?a*` - set placeholder from a simple (or also associative) array, generating a sequence of values
@@ -272,11 +264,14 @@ where `*` is one of the types:
 the rules for conversion and escaping are the same as for the single scalar types described above. Example:
 
 ```php
- $db->query('SELECT * FROM `test` WHERE `id` IN (?ai)', [123, 1.99]);
+$db->query(
+    'SELECT * FROM `test` WHERE `id` IN (?ai)',
+    [123, 456]
+);
 ```
 SQL query after template conversion:
 ```sql
- SELECT * FROM `test` WHERE `id` IN ("123", "1")
+SELECT * FROM `test` WHERE `id` IN ("123", "456")
 ```
 
 
@@ -284,11 +279,14 @@ SQL query after template conversion:
 
 Example:
 ```php
-$db->query('INSERT INTO `users` SET ?A[?i, "?s"]', ['age' => 41, 'name' => "d'Artagnan"]);
+$db->query(
+    'INSERT INTO `users` SET ?A[?i, "?s"]',
+    ['age' => 41, 'name' => "d'Artagnan"]
+);
 ```
 SQL query after template conversion:
 ```sql
- INSERT INTO `users` SET `age` = 41,`name` = "d\'Artagnan"
+INSERT INTO `users` SET `age` = 41,`name` = "d\'Artagnan"
 ```
 
 #### `?a[?n, ?s, ?i, ...]` — set placeholder with an explicit indication of the type and number of arguments, generating a sequence of values
@@ -296,11 +294,14 @@ SQL query after template conversion:
 Example:
 
 ```php
-$db->query('SELECT * FROM `users` WHERE `name` IN (?a["?s", "?s"])', ['Daniel O"Neill', "d'Artagnan"]);
+$db->query(
+    'SELECT * FROM `users` WHERE `name` IN (?a["?s", "?s"])',
+    ['Daniel O"Neill', "d'Artagnan"]
+);
 ```
 SQL query after template conversion:
 ```sql
- SELECT * FROM `users` WHERE `name` IN ("Daniel O\"Neill", "d\'Artagnan")
+SELECT * FROM `users` WHERE `name` IN ("Daniel O\"Neill", "d\'Artagnan")
 ```
 
 
@@ -309,12 +310,16 @@ SQL query after template conversion:
 This placeholder is intended for cases where the name of a table or field is passed in the query as a parameter. Field and table names are framed with an apostrophe:
 
 ```php
- $db->query('SELECT ?f FROM ?f', 'name', 'database.table_name');
- ```
+$db->query(
+    'SELECT ?f FROM ?f',
+    'name',
+    'database.table_name'
+);
+```
 SQL query after template conversion:
- ```sql
-  SELECT `name` FROM `database`.`table_name`
- ```
+```sql
+SELECT `name` FROM `database`.`table_name`
+```
 
 
 ### Delimiting quotes
@@ -322,17 +327,19 @@ SQL query after template conversion:
 **The library requires the programmer to follow the SQL syntax.** This means that the following query will not work:
 
 ```php
-$db->query('SELECT CONCAT("Hello, ", ?s, "!")', 'world');
+$db->query(
+    'SELECT CONCAT("Hello, ", ?s, "!")',
+    'world'
+);
 ```
-
 — placeholder `?s` must be enclosed in single or double quotes:
-
 ```php
-$db->query('SELECT concat("Hello, ", "?s", "!")', 'world');
+$db->query(
+    'SELECT concat("Hello, ", "?s", "!")',
+    'world'
+);
 ```
-
 SQL query after template conversion:
-
 ```sql
 SELECT concat("Hello, ", "world", "!")
 ```
