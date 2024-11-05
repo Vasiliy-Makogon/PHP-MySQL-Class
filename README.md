@@ -19,7 +19,7 @@ the PHP extension [mysqli](https://www.php.net/en/mysqli).
 
 ### Why do we need a self-written class for MySql if PHP has a PDO abstraction and a mysqli extension?
 
-The main disadvantages of all libraries for working with the mysql database in PHP are::
+The main disadvantages of all libraries for working with the mysql database in PHP are:
 
 * **Verbosity**
     * Developers have two options to prevent SQL injections:
@@ -32,7 +32,7 @@ The main disadvantages of all libraries for working with the mysql database in P
   queries are [terribly verbose](https://www.php.net/manual/en/mysqli.prepare.php#refsect1-mysqli.prepare-examples). Use "out of the box" PDO abstraction or mysqli extension, no aggregation
   all methods for obtaining data from the DBMS is simply impossible - in order to get the value from the table, you need
   write at least 5 lines of code! And so on for every request!
-        * Manual escaping of parameters going into the body of an SQL query is not even discussed. A good programmer lazy programmer. Everything should be as automated as possible..
+        * Manual escaping of parameters going into the body of an SQL query is not even discussed. A good programmer lazy programmer. Everything should be as automated as possible.
 * **Unable to get SQL query for debugging**
     * To understand why the SQL query does not work in the program, you need to debug it - find either a logical or
       syntax error. To find an error, you need to "see" the SQL query itself, which the database "swears" at, with
