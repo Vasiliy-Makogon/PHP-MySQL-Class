@@ -61,7 +61,7 @@ class Statement
      */
     public function fetchAssocArray(): array
     {
-        $array = array();
+        $array = [];
 
         while ($row = $this->mysqli_result->fetch_assoc()) {
             $array[] = $row;
@@ -77,7 +77,7 @@ class Statement
      */
     public function fetchRowArray(): array
     {
-        $array = array();
+        $array = [];
 
         while ($row = $this->mysqli_result->fetch_row()) {
             $array[] = $row;
@@ -93,7 +93,7 @@ class Statement
      */
     public function fetchObjectArray(): array
     {
-        $array = array();
+        $array = [];
 
         while ($row = $this->mysqli_result->fetch_object()) {
             $array[] = $row;
@@ -121,7 +121,7 @@ class Statement
      * This command is only valid for SELECT statements.
      *
      * @return int
-     *@see mysqli_num_rows
+     * @see mysqli_num_rows
      */
     public function getNumRows(): int
     {

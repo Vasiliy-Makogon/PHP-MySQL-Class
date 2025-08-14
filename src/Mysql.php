@@ -813,7 +813,7 @@ class Mysql
                                     if (!empty($is_associative_array)) {
                                         $parts[] = $this->escapeFieldName($key, $original_query) . ' = "' . $val . '"';
                                     } else {
-                                        $parts[] = '"' . $val . '"';
+                                        $parts[] = $matches[0] === 's' ? '"' . $val . '"' : $val;
                                     }
                                 }
 
@@ -860,7 +860,7 @@ class Mysql
 
         // меняем поведение PHP в отношении приведения bool к string
         if (is_bool($value)) {
-            return (string)(int)$value;
+            return (string) (int) $value;
         }
 
         if (!is_string($value) && !(is_numeric($value) || is_null($value))) {
@@ -869,7 +869,7 @@ class Mysql
             );
         }
 
-        return (string)$value;
+        return (string) $value;
     }
 
     /**
@@ -890,7 +890,7 @@ class Mysql
         switch ($this->type_mode) {
             case self::MODE_TRANSFORM:
                 if ($this->isFloat($value) || is_null($value) || is_bool($value)) {
-                    return (int)$value;
+                    return (int) $value;
                 }
 
             case self::MODE_STRICT:
@@ -925,7 +925,7 @@ class Mysql
         switch ($this->type_mode) {
             case self::MODE_TRANSFORM:
                 if ($this->isInteger($value) || is_null($value) || is_bool($value)) {
-                    return (float)$value;
+                    return (float) $value;
                 }
 
             case self::MODE_STRICT:
@@ -1045,7 +1045,15 @@ class Mysql
             return false;
         }
 
-        return !$this->isFloat($val) && preg_match('~^((?:\+|-)?[0-9]+)$~', $val) === 1;
+        if (is_int($val)) {
+            return true;
+        }
+
+        if ($this->isFloat($val)) {
+            return false;
+        }
+
+        return preg_match('~^((?:\+|-)?[0-9]+)$~', (string)$val) === 1;
     }
 
     /**
@@ -1060,7 +1068,15 @@ class Mysql
             return false;
         }
 
-        return gettype($val) === "double" || preg_match("/^([+-]*\\d+)*\\.(\\d+)*$/", $val) === 1;
+        if (gettype($val) === "double") {
+            return true;
+        }
+
+        if (!is_string($val)) {
+            return false;
+        }
+
+        return preg_match('/^[+-]?(\d*\.\d+|\d+\.\d*)$/', $val) === 1;
     }
 
     /**
