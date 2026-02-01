@@ -1,1 +1,8 @@
 /.idea
+/composer.lock
+/vendor
+/.phpunit.cache
+/.phpunit.result.cache
+/html-coverage
+/coverage.xml
+tests/.env.test

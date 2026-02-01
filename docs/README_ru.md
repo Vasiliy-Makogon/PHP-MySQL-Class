@@ -1,3 +1,9 @@
+**Другие языки:**
+- [English documentation](../README.md)
+- [Documentation française](README_fr.md)
+
+---
+
 ## Получение библиотеки
 
 Вы можете [скачать её архивом](https://github.com/Vasiliy-Makogon/Database/archive/master.zip), клонировать с данного сайта или загрузить через composer ([ссылка на packagist.org](https://packagist.org/packages/krugozor/database)):
@@ -320,4 +326,4 @@ SELECT concat("Hello, ", "world", "!")
 
 ## Примеры работы с библиотекой
 
-См. в файле [./console/tests.php](./console/tests.php)
+См. в файле [./console/tests.php](../console/tests.php)

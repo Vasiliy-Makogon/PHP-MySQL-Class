@@ -1,11 +1,12 @@
-**![](https://upload.wikimedia.org/wikipedia/en/thumb/f/f3/Flag_of_Russia.svg/23px-Flag_of_Russia.svg.png) [Русскоязычная документация находится тут](README_rus.md) ![](https://upload.wikimedia.org/wikipedia/en/thumb/f/f3/Flag_of_Russia.svg/23px-Flag_of_Russia.svg.png)**
+**Other languages:**
+- [Русская документация](docs/README_ru.md)
+- [Documentation française](docs/README_fr.md)
 
 ---
 
-## ![](https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/23px-Flag_of_the_United_Kingdom.svg.png) Getting the Library ![](https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/23px-Flag_of_the_United_Kingdom.svg.png)
+## Getting the Library
 
-You can [download it as an archive](https://github.com/Vasiliy-Makogon/Database/archive/master.zip), clone from this
-site, or download via composer ([link to packagist.org](https://packagist.org/packages/krugozor/database)):
+You can [download it as an archive](https://github.com/Vasiliy-Makogon/Database/archive/master.zip), clone it from this site, or install via composer ([packagist.org link](https://packagist.org/packages/krugozor/database)):
 ```
 composer require krugozor/database
 ```
@@ -13,58 +14,41 @@ composer require krugozor/database
 
 ## What is `krugozor/database`?
 
-`krugozor/database` is a PHP >= 8.0 class library for simple, convenient, fast and secure work with the MySql database, using
-the PHP extension [mysqli](https://www.php.net/en/mysqli).
+`krugozor/database` is a PHP >= 8.0 class library for simple, convenient, fast, and secure work with MySQL databases, using the PHP extension [mysqli](https://www.php.net/manual/en/book.mysqli.php).
 
 
-### Why do we need a self-written class for MySql if PHP has a PDO abstraction and a mysqli extension?
+### Why do you need a custom class for MySQL when PHP already has PDO abstraction and the mysqli extension?
 
-The main disadvantages of all libraries for working with the mysql database in PHP are:
+The main drawbacks of all libraries for working with MySQL in PHP are:
 
 * **Verbosity**
-    * Developers have two options to prevent SQL injections:
-        * Use [prepared queries](https://www.php.net/manual/en/mysqli.quickstart.prepared-statements.php).
-        * Manually escape the parameters going into the body of the SQL query. String parameters run
-          via [mysqli_real_escape_string](https://www.php.net/manual/en/mysqli.real-escape-string.php) and the expected
-          convert numeric parameters to the appropriate types - `int` and `float`.
-    * Both approaches have huge drawbacks:
-        * Prepared
-  queries are [terribly verbose](https://www.php.net/manual/en/mysqli.prepare.php#refsect1-mysqli.prepare-examples). Use "out of the box" PDO abstraction or mysqli extension, no aggregation
-  all methods for obtaining data from the DBMS is simply impossible - in order to get the value from the table, you need
-  write at least 5 lines of code! And so on for every request!
-        * Manual escaping of parameters going into the body of an SQL query is not even discussed. A good programmer lazy programmer. Everything should be as automated as possible.
-* **Unable to get SQL query for debugging**
-    * To understand why the SQL query does not work in the program, you need to debug it - find either a logical or
-      syntax error. To find an error, you need to "see" the SQL query itself, which the database "swears" at, with
-      parameters substituted into its body. Those. to have formed high-grade SQL. If the developer is using PDO,
-      with prepared queries, then it's... IMPOSSIBLE! There are no most convenient mechanisms for this in
-      native libraries [NOT PROVIDED](https://qna.habr.com/q/22669).
-      It remains either to pervert, or to climb into the database log.
+  * To prevent SQL injections, developers have two options:
+    * Use [prepared statements](https://www.php.net/manual/en/mysqli.quickstart.prepared-statements.php).
+    * Manually escape parameters going into the SQL query body. Pass string parameters through [mysqli_real_escape_string](https://www.php.net/manual/en/mysqli.real-escape-string.php), and cast expected numeric parameters to the appropriate types — `int` and `float`.
+  * Both approaches have significant drawbacks:
+    * Prepared statements are [terribly verbose](https://www.php.net/manual/en/mysqli.prepare.php#refsect1-mysqli.prepare-examples). Using PDO abstraction or the mysqli extension "out of the box", without aggregating all methods for retrieving data from the DBMS, is simply impossible — to get a value from a table you need to write at least 5 lines of code! And that's for every single query!
+    * Manual escaping of parameters going into the SQL query body is not even worth discussing. A good programmer is a lazy programmer. Everything should be automated as much as possible.
+* **Inability to get the SQL query for debugging**
+  * To understand why an SQL query doesn't work in your program, you need to debug it — find either a logical or syntactic error. To find the error, you need to "see" the actual SQL query that the database complained about, with parameters substituted into its body. That is, to have a fully formed SQL statement. If a developer uses PDO with prepared statements, this is... IMPOSSIBLE! No convenient mechanisms for this are [PROVIDED](https://qna.habr.com/q/22669) in the native libraries. You're left with either workarounds or digging through the database log.
 
 
-### Solution: `krugozor/database` is a class for working with MySql
+### Solution: `krugozor/database` — a class for working with MySQL
 
-1. Eliminates verbosity - instead of 3 or more lines of code to execute one request when using the "native" library, you write only one.
-2. Screens all parameters that go to the request body, according to the specified type of placeholders - reliable protection against SQL injections.
+1. Eliminates verbosity — instead of 3 or more lines of code to execute a single query when using the "native" library, you write just one.
+2. Escapes all parameters going into the query body according to the specified placeholder type — reliable protection against SQL injections.
 3. Does not replace the functionality of the "native" mysqli adapter, but simply complements it.
-4. Expandable. In fact, the library provides only a parser and the execution of a SQL query with guaranteed protection against SQL injections. You can inherit from any library class and use both the library mechanisms and the `mysqli` and `mysqli_result` mechanisms to create the methods you need to work with.
+4. Extensible. Essentially, the library provides only a parser and SQL query execution with guaranteed protection against SQL injections. You can inherit from any library class and, using both library mechanisms and `mysqli` and `mysqli_result` mechanisms, create the methods you need.
 
+### What the `krugozor/database` library is NOT
 
-### What is NOT the `krugozor/database` library?
+Most wrappers for various database drivers are a pile of useless code with terrible architecture. Their authors, not understanding the practical purpose of their wrappers themselves, turn them into something like query builders (sql builder), ActiveRecord libraries, and other ORM solutions.
 
-Most wrappers for various database drivers are a bunch of useless code with a disgusting
-architecture. Their authors, not understanding the practical purpose of their wrappers themselves, turn them into a kind of builders
-queries (sql builder), ActiveRecord libraries and other ORM solutions.
-
-The `krugozor/database` library is none of the above. This is just a convenient tool for working with regular SQL within the framework
-MySQL DBMS - and no more!
+The `krugozor/database` library is none of these. It's just a convenient tool for working with regular SQL within the MySQL DBMS — and nothing more!
 
 
 ## What are placeholders?
 
-**Placeholders** — **special *typed markers* that are written in the SQL query string *instead of
-explicit values (query parameters)***. And the values themselves are passed "later", as subsequent arguments to the main
-a method that executes a SQL query:
+**Placeholders** — **special typed markers that are written in the SQL query string *instead of explicit values (query parameters)***. The values themselves are passed "later", as subsequent arguments to the main method that executes the SQL query:
 
 ```php
 $result = $db->query(
@@ -73,36 +57,34 @@ $result = $db->query(
 );
 ```
 
-SQL query parameters passed through the *placeholders* system are processed by special escaping mechanisms, in
-depending on the type of placeholders. Those. you no longer need to wrap variables in escaping functions
-type `mysqli_real_escape_string()` or cast them to a numeric type as before:
+SQL query parameters passed through the *placeholder* system are processed by special escaping mechanisms, depending on the placeholder type. This means you no longer need to wrap variables in escaping functions like `mysqli_real_escape_string()` or cast them to numeric types, as was done before:
 
 ```php
 <?php
-// Previously, before each request to the DBMS, we did
-// something like this (and many people still don't do it):
+// Previously, before each query to the DBMS, we did
+// something like this (and many still don't do it):
 $id = (int) $_POST['id'];
 $value = mysqli_real_escape_string($mysql, $_POST['value']);
 $result = mysqli_query($mysql, "SELECT * FROM `t` WHERE `f1` = '$value' AND `f2` = $id");
 ```
 
-Now it has become easy to write queries, quickly, and most importantly, the `krugozor/database` library completely prevents any possible
-SQL injections.
+Now writing queries has become easy, fast, and most importantly, the `krugozor/database` library completely prevents any possible SQL injections.
 
-### Introduction to placeholder system
 
-The types of fillers and their purposes are described below. Before getting acquainted with the types of fillers, it is necessary to understand how the library mechanism works.
+### Introduction to the Placeholder System
 
-#### PHP problem
+The types of placeholders and their purposes are described below. Before getting acquainted with placeholder types, you need to understand how the library mechanism works.
 
-PHP is a weakly typed language and an ideological dilemma arose when developing this library.
-Let's imagine that we have a table with the following structure:
+#### The PHP Problem
+
+PHP is a weakly typed language, and an ideological dilemma arose during the development of this library.
+Imagine we have a table with the following structure:
 
 ```sql
 `name` varchar not null
 `flag` tinyint not null
 ```
-and the library MUST (for some reason, possibly beyond the developer's control) execute the following request:
+and the library MUST (for some reason, possibly beyond the developer's control) execute the following query:
 
 ```php
 $db->query(
@@ -110,50 +92,50 @@ $db->query(
     null, false
 );
 ```
-In this example, an attempt is made to write a `null` value to the `not null` text field `name`, and a `false` boolean type to the `flag` numeric field. What should we do in this situation?
+In this example, there's an attempt to write a `null` value to the `not null` text field `name`, and a boolean `false` to the numeric field `flag`. What should we do in this situation?
 
-* Who should be responsible for validating query parameters - the client code or the library?
-* Should we interrupt program execution in this case, or should we perhaps apply some manipulations so that the data is written to the database?
-* Can we treat the `false` value for the `tinyint` column as the value `0`, and `null` as an empty string for the `name` column?
-* How can we simplify or standardize such problems in our code?
+* Who should be responsible for validating query parameters — the client code or the library?
+* Should we interrupt program execution in this case, or perhaps apply some manipulations so that the data gets written to the database?
+* Can we treat the `false` value for the `tinyint` column as `0`, and `null` as an empty string for the `name` column?
+* How can we simplify or standardize such issues in our code?
 
-In view of the questions raised, it was decided to implement two operating modes in this library.
+Given these questions, it was decided to implement two operating modes in this library.
 
-### Library operating modes
+### Library Operating Modes
 
-* **Mysql::MODE_STRICT - strict match mode for placeholder type and argument type**.
-  In `Mysql::MODE_STRICT` mode, *the argument type must match the placeholder type*. For example, an attempt to pass the value `55.5` or `'55.5'` as an argument for an integer placeholder `?i` will result in an exception being thrown:
+  * **Mysql::MODE_STRICT — strict mode for matching placeholder type and argument type**.
+    In `Mysql::MODE_STRICT` mode, *the argument type must match the placeholder type*. For example, attempting to pass the value `55.5` or `'55.5'` as an argument for an integer placeholder `?i` will result in an exception being thrown:
 
 ```php
-// set strict mode
+// set strict operating mode
 $db->setTypeMode(Mysql::MODE_STRICT);
 // this expression will not be executed, an exception will be thrown:
-// attempt to specify a value of type "integer" for placeholder of type "double" in query template "SELECT ?i"
+// attempt to specify a value of type "double" for placeholder of type "integer" in query template "SELECT ?i"
 $db->query('SELECT ?i', 55.5);
 ```
 
-* **Mysql::MODE_TRANSFORM — argument conversion mode to placeholder type when placeholder type and argument type do not match.** The `Mysql::MODE_TRANSFORM` mode is set by default and is a "tolerant" mode - if the placeholder type and the argument type do not match, it does not throw an exception, but *tryes to convert the argument to the desired placeholder type using the PHP language itself*. By the way, I, as the author of the library, always use this particular mode, I have never used strict mode (`Mysql::MODE_STRICT`) in real work, but perhaps you will need it specifically.
+* **Mysql::MODE_TRANSFORM — mode for converting the argument to the placeholder type when the placeholder type and argument type don't match.** The `Mysql::MODE_TRANSFORM` mode is set by default and is a "tolerant" mode — when the placeholder type and argument type don't match, it doesn't throw an exception, but *tries to convert the argument to the required placeholder type using PHP itself*. By the way, I, as the library author, always use this particular mode; I've never used strict mode (`Mysql::MODE_STRICT`) in real work, but perhaps you specifically will need it.
 
-**The following transformations are allowed in `Mysql::MODE_TRANSFORM`:**
+**The following conversions are allowed in Mysql::MODE_TRANSFORM mode:**
 
-* **Cast to type `int` (placeholder `?i`)**
-  * floating point numbers represented both in `string` and `double` types
+* **Converted to type `int` (placeholder `?i`)**
+  * floating-point numbers represented as either `string` or `double` type
   * `bool` TRUE is converted to `int(1)`, FALSE is converted to `int(0)`
   * `null` is converted to `int(0)`
-* **Cast to type `double` (placeholder `?d`)**
-  * integers represented in both `string` and `int` types
-  * `bool` TRUE becomes `float(1)`, FALSE becomes `float(0)`
+* **Converted to type `double` (placeholder `?d`)**
+  * integers represented as either `string` or `int` type
+  * `bool` TRUE is converted to `float(1)`, FALSE is converted to `float(0)`
   * `null` is converted to `float(0)`
-* **Cast to type `string` (placeholder `?s`)**
-  * `bool` TRUE is converted to `string(1) "1"`, FALSE is converted to `string(1) "0"`. This behavior is different from casting `bool` to `int` in PHP, as often, in practice, the boolean type is written in MySql as a number.
-  * a `numeric` value is converted to a string according to PHP's conversion rules
+* **Converted to type `string` (placeholder `?s`)**
+  * `bool` TRUE is converted to `string(1) "1"`, FALSE is converted to `string(1) "0"`. This behavior differs from casting `bool` to `int` in PHP, since often, in practice, boolean types are written to MySQL as numbers.
+  * `numeric` type values are converted to string according to PHP conversion rules
   * `null` is converted to `string(0) ""`
-* **Cast to type `null` (placeholder `?n`)**
+* **Converted to type `null` (placeholder `?n`)**
   * any arguments.
-* For arrays, objects and resources, conversions are not allowed.
+* For arrays, objects, and resources, conversions are not allowed.
 
 
-### What types of placeholders are provided in the `krugozor/database` library?
+### What placeholder types are available in the library?
 
 
 #### `?i` — integer placeholder
@@ -168,15 +150,11 @@ SQL query after template conversion:
 SELECT * FROM `users` WHERE `id` = 123
 ```
 
-**ATTENTION!** If you operate on numbers that are outside the limits of `PHP_INT_MAX`, then:
+**WARNING!** If you're working with numbers that exceed `PHP_INT_MAX`, then:
+* Work with them exclusively as strings in your programs.
+* Don't use this placeholder; use the string placeholder `?s` (see below). The thing is, numbers exceeding `PHP_INT_MAX` are interpreted by PHP as floating-point numbers. The library parser will try to convert the parameter to `int` type, and as a result "*the result will be undefined, since float doesn't have sufficient precision to return the correct result. In this case, neither a warning nor even a notice will be displayed!*" — [php.net](https://www.php.net/manual/en/language.types.integer.php#language.types.integer.casting.from-float).
 
-* Operate them exclusively as strings in your programs.
-* Don't use this placeholder, use the string placeholder `?s` (see below). The point is that numbers beyond
-  limits `PHP_INT_MAX`, PHP interprets as floating point numbers. The library parser will try to convert
-  parameter to type `int`, as a result "*the result will be undefined, since the float does not have sufficient precision to
-  return the correct result. In this case, neither a warning nor even a remark will be displayed!*” — [php.net](https://www.php.net/manual/en/language.types.integer.php#language.types.integer.casting.from-float).
-
-#### `?d` — floating point placeholder
+#### `?d` — floating-point number placeholder
 
 ```php
 $db->query(
@@ -189,29 +167,26 @@ SQL query after template conversion:
 SELECT * FROM `prices` WHERE `cost` IN (12.56, 12.33)
 ```
 
-**ATTENTION!** If you are using a library to work with the `double` data type, set the appropriate locale so that
-If the separator of the integer and fractional parts were the same both at the PHP level and at the DBMS level.
+**WARNING!** If you're using the library to work with the `double` data type, set the appropriate locale so that the decimal separator is the same at both the PHP level and the DBMS level.
 
 #### `?s` — string type placeholder
 
-The argument values are escaped using the `mysqli::real_escape_string()` method:
+Argument values are escaped using the `mysqli::real_escape_string()` method:
 
 ```php
 $db->query(
     'SELECT "?s"',
-    "You are all fools, and I am d'Artagnan!"
+    "You're all fools, and I'm d'Artagnan!"
 );
 ```
-
 SQL query after template conversion:
 
 ```sql
-SELECT "You are all fools, and I am d\'Artagnan!"
+SELECT "You\'re all fools, and I\'m d\'Artagnan!"
 ```
-
 #### `?S` — string type placeholder for substitution in the SQL LIKE operator
 
-Argument values are escaped using the `mysqli::real_escape_string()` method + escaping special characters used in the LIKE operator (`%` and `_`):
+Argument values are escaped using the `mysqli::real_escape_string()` method + escaping of special characters used in the LIKE operator (`%` and `_`):
 
 ```php
 $db->query('SELECT "?S"', '% _');
@@ -221,9 +196,8 @@ SQL query after template conversion:
 SELECT "\% \_"
 ```
 
-#### `?n` — placeholder `NULL` type
-
-The value of any arguments is ignored, placeholders are replaced with the string `NULL` in the SQL query:
+#### `?n` — `NULL` type placeholder
+The value of any arguments is ignored; placeholders are replaced with the string `NULL` in the SQL query:
 
 ```php
 $db->query('SELECT ?n', 123);
@@ -233,15 +207,15 @@ SQL query after template conversion:
 SELECT NULL
 ```
 
-#### `?A*` — associative set placeholder from an associative array, generating a sequence of pairs of the form `key = value`
+#### `?A*` — associative set placeholder from an associative array, generating a sequence of `key = value` pairs
 
-where the character `*` is one of the placeholders:
+where the `*` character is one of the placeholders:
 
-* `i` (integer placeholder)
-* `d` (float placeholder)
-* `s` (string type placeholder)
+ * `i` (integer placeholder)
+ * `d` (floating-point number placeholder)
+ * `s` (string type placeholder)
 
-the rules for conversion and escaping are the same as for the single scalar types described above. Example:
+the conversion and escaping rules are the same as for the single scalar types described above. Example:
 
 ```php
 $db->query(
@@ -254,14 +228,14 @@ SQL query after template conversion:
 INSERT INTO `test` SET `first` = "123", `second` = "456"
 ```
 
-#### `?a*` - set placeholder from a simple (or also associative) array, generating a sequence of values
+#### `?a*` — set placeholder from a simple (or also associative) array, generating a sequence of values
 
 where `*` is one of the types:
-* `i` (integer placeholder)
-* `d` (float placeholder)
-* `s` (string type placeholder)
+ * `i` (integer placeholder)
+ * `d` (floating-point number placeholder)
+ * `s` (string type placeholder)
 
-the rules for conversion and escaping are the same as for the single scalar types described above. Example:
+the conversion and escaping rules are the same as for the single scalar types described above. Example:
 
 ```php
 $db->query(
@@ -275,7 +249,7 @@ SELECT * FROM `test` WHERE `id` IN ("123", "456")
 ```
 
 
-#### `?A[?n, ?s, ?i, ...]` — associative set placeholder with an explicit indication of the type and number of arguments, generating a sequence of `key = value` pairs
+#### `?A[?n, ?s, ?i, ...]` — associative set placeholder with explicit type and argument count specification, generating a sequence of `key = value` pairs
 
 Example:
 ```php
@@ -289,25 +263,23 @@ SQL query after template conversion:
 INSERT INTO `users` SET `age` = 41,`name` = "d\'Artagnan"
 ```
 
-#### `?a[?n, ?s, ?i, ...]` — set placeholder with an explicit indication of the type and number of arguments, generating a sequence of values
-
+#### `?a[?n, ?s, ?i, ...]` — set placeholder with explicit type and argument count specification, generating a sequence of values
 Example:
-
 ```php
 $db->query(
     'SELECT * FROM `users` WHERE `name` IN (?a["?s", "?s"])',
-    ['Daniel O"Neill', "d'Artagnan"]
+    ["Marquis d\"Arcy", "d'Artagnan"]
 );
 ```
 SQL query after template conversion:
 ```sql
-SELECT * FROM `users` WHERE `name` IN ("Daniel O\"Neill", "d\'Artagnan")
+SELECT * FROM `users` WHERE `name` IN ("Marquis d\"Arcy", "d\'Artagnan")
 ```
 
 
 #### `?f` — table or field name placeholder
 
-This placeholder is intended for cases where the name of a table or field is passed in the query as a parameter. Field and table names are framed with an apostrophe:
+This placeholder is intended for cases when the table or field name is passed in the query as a parameter. Field and table names are enclosed in backticks:
 
 ```php
 $db->query(
@@ -322,9 +294,9 @@ SELECT `name` FROM `database`.`table_name`
 ```
 
 
-### Delimiting quotes
+### Delimiting Quotes
 
-**The library requires the programmer to follow the SQL syntax.** This means that the following query will not work:
+**The library requires the programmer to follow SQL syntax.** This means the following query will not work:
 
 ```php
 $db->query(
@@ -332,7 +304,7 @@ $db->query(
     'world'
 );
 ```
-— placeholder `?s` must be enclosed in single or double quotes:
+— the `?s` placeholder must be enclosed in single or double quotes:
 ```php
 $db->query(
     'SELECT concat("Hello, ", "?s", "!")',
@@ -344,9 +316,9 @@ SQL query after template conversion:
 SELECT concat("Hello, ", "world", "!")
 ```
 
-For those who are used to working with PDO, this will seem strange, but implementing a mechanism that determines whether it is necessary to enclose the placeholder value in quotes in one case or not is a very non-trivial task that requires writing a whole parser.
+For those accustomed to working with PDO, this will seem strange, but implementing a mechanism that determines whether to enclose a placeholder value in quotes or not is a very non-trivial task requiring writing an entire parser.
 
 
-## Examples of working with the library
+## Examples of Working with the Library
 
-See in file [./console/tests.php](./console/tests.php)
+See the file [./console/tests.php](./console/tests.php)

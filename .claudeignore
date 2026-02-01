@@ -1,0 +1,5 @@
+vendor/
+.git/
+.phpunit.cache/
+html-coverage/
+.claude/
