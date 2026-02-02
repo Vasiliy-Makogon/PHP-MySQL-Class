@@ -6,7 +6,8 @@
       "Bash(vendor/bin/phpunit:*)",
       "Bash(php:*)",
       "Bash(composer test:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git mv:*)"
     ]
   }
 }

@@ -1,6 +1,19 @@
 **Other languages:**
 - [Русская документация](docs/README_ru.md)
 - [Documentation française](docs/README_fr.md)
+- [Deutsche Dokumentation](docs/README_de.md)
+- [Documentazione italiana](docs/README_it.md)
+- [日本語ドキュメント](docs/README_ja.md)
+- [Documentación en español](docs/README_es.md)
+- [한국어 문서](docs/README_ko.md)
+- [简体中文文档](docs/README_zh-CN.md)
+- [繁體中文文件](docs/README_zh-TW.md)
+- [Dokumentasi Bahasa Indonesia](docs/README_id.md)
+- [Documentação em Português (BR)](docs/README_pt-BR.md)
+- [हिंदी दस्तावेज़](docs/README_hi.md)
+- [التوثيق بالعربية](docs/README_ar.md)
+- [Türkçe Dokümantasyon](docs/README_tr.md)
+- [Tài liệu tiếng Việt](docs/README_vi.md)
 
 ---
 
