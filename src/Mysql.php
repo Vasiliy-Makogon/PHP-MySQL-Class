@@ -304,9 +304,9 @@ class Mysql
      * @throws MySqlException
      */
     public static function create(
-        string $server = null,
-        string $username = null,
-        string $password = null,
+        ?string $server = null,
+        ?string $username = null,
+        ?string $password = null,
         int|string|null $port = null,
         int|string|null $socket = null
     ): Mysql {
@@ -713,9 +713,9 @@ class Mysql
      * @throws MySqlException
      */
     private function __construct(
-        string $server = null,
-        string $user = null,
-        string $password = null,
+        ?string $server = null,
+        ?string $user = null,
+        ?string $password = null,
         int|string|null $port = null,
         int|string|null $socket = null
     ) {
@@ -1291,7 +1291,7 @@ class Mysql
         string $string,
         string $replacement,
         int $start,
-        int $length = null,
+        ?int $length = null,
         ?string $encoding = null
     ): string {
         if (!$encoding) {
