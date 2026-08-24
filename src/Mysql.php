@@ -5,6 +5,7 @@ namespace Krugozor\Database;
 use mysqli;
 use mysqli_result;
 use mysqli_sql_exception;
+use Throwable;
 
 /**
  * @author Vasiliy Makogon
@@ -59,6 +60,9 @@ class Mysql
     /** @var bool Whether to accumulate SQL queries in self::$queries storage */
     private bool $store_queries = false;
 
+    /** @var bool Is a transaction started by self::beginTransaction() active? */
+    private bool $in_transaction = false;
+
     /** @var string Error message language */
     private string $lang = 'en';
 
@@ -81,6 +85,8 @@ class Mysql
             9 => 'Attempting to use an array placeholder without specifying the data type of its elements',
             10 => 'Two consecutive `.` characters in a column or table name',
             11 => '%s: database connection error: %s',
+            12 => '%s: a transaction is already active',
+            13 => '%s: no active transaction',
         ],
         'ru' => [
             0 => '%s: ошибка установки кодировки: %s',
@@ -95,6 +101,8 @@ class Mysql
             9 => 'Попытка воспользоваться заполнителем массива без указания типа данных его элементов',
             10 => 'Два символа `.` идущие подряд в имени столбца или таблицы',
             11 => '%s: ошибка подключения к базе данных: %s',
+            12 => '%s: транзакция уже начата',
+            13 => '%s: нет активной транзакции',
         ],
         'fr' => [
             0 => '%s: erreur de définition de l\'encodage des caractères: %s',
@@ -109,6 +117,8 @@ class Mysql
             9 => 'Tentative d\'utiliser un placeholder de tableau sans spécifier le type de données de ses éléments',
             10 => 'Deux caractères `.` consécutifs dans un nom de colonne ou de table',
             11 => '%s: erreur de connexion à la base de données: %s',
+            12 => '%s: une transaction est déjà active',
+            13 => '%s: aucune transaction active',
         ],
         'de' => [
             0 => '%s: Fehler beim Setzen der Zeichenkodierung: %s',
@@ -123,6 +133,8 @@ class Mysql
             9 => 'Versuch, einen Array-Platzhalter zu verwenden, ohne den Datentyp seiner Elemente anzugeben',
             10 => 'Zwei aufeinanderfolgende `.`-Zeichen in einem Spalten- oder Tabellennamen',
             11 => '%s: Fehler bei der Verbindung zur Datenbank: %s',
+            12 => '%s: eine Transaktion ist bereits aktiv',
+            13 => '%s: keine aktive Transaktion',
         ],
         'it' => [
             0 => '%s: errore nell\'impostazione della codifica dei caratteri: %s',
@@ -137,6 +149,8 @@ class Mysql
             9 => 'Tentativo di utilizzare un placeholder array senza specificare il tipo di dati dei suoi elementi',
             10 => 'Due caratteri `.` consecutivi in un nome di colonna o tabella',
             11 => '%s: errore di connessione al database: %s',
+            12 => '%s: una transazione è già attiva',
+            13 => '%s: nessuna transazione attiva',
         ],
         'ja' => [
             0 => '%s: 文字エンコーディングの設定エラー: %s',
@@ -151,6 +165,8 @@ class Mysql
             9 => '要素のデータ型を指定せずに配列プレースホルダーを使用しようとしています',
             10 => 'カラム名またはテーブル名に連続した `.` 文字があります',
             11 => '%s: データベース接続エラー: %s',
+            12 => '%s: トランザクションは既に開始されています',
+            13 => '%s: アクティブなトランザクションがありません',
         ],
         'es' => [
             0 => '%s: error al establecer la codificación de caracteres: %s',
@@ -165,6 +181,8 @@ class Mysql
             9 => 'Intento de usar un placeholder de array sin especificar el tipo de datos de sus elementos',
             10 => 'Dos caracteres `.` consecutivos en un nombre de columna o tabla',
             11 => '%s: error de conexión a la base de datos: %s',
+            12 => '%s: ya hay una transacción activa',
+            13 => '%s: no hay ninguna transacción activa',
         ],
         'ko' => [
             0 => '%s: 문자 인코딩 설정 오류: %s',
@@ -179,6 +197,8 @@ class Mysql
             9 => '요소의 데이터 유형을 지정하지 않고 배열 플레이스홀더를 사용하려는 시도',
             10 => '열 또는 테이블 이름에 연속된 `.` 문자',
             11 => '%s: 데이터베이스 연결 오류: %s',
+            12 => '%s: 트랜잭션이 이미 활성화되어 있습니다',
+            13 => '%s: 활성 트랜잭션이 없습니다',
         ],
         'zh-CN' => [
             0 => '%s: 设置字符编码错误: %s',
@@ -193,6 +213,8 @@ class Mysql
             9 => '尝试使用数组占位符而未指定其元素的数据类型',
             10 => '列名或表名中有两个连续的 `.` 字符',
             11 => '%s: 数据库连接错误: %s',
+            12 => '%s: 事务已处于活动状态',
+            13 => '%s: 没有活动的事务',
         ],
         'zh-TW' => [
             0 => '%s: 設定字元編碼錯誤: %s',
@@ -207,6 +229,8 @@ class Mysql
             9 => '嘗試使用陣列佔位符而未指定其元素的資料類型',
             10 => '欄名或表名中有兩個連續的 `.` 字元',
             11 => '%s: 資料庫連接錯誤: %s',
+            12 => '%s: 交易已處於啟用狀態',
+            13 => '%s: 沒有啟用中的交易',
         ],
         'id' => [
             0 => '%s: kesalahan pengaturan encoding karakter: %s',
@@ -221,6 +245,8 @@ class Mysql
             9 => 'Percobaan untuk menggunakan placeholder array tanpa menentukan tipe data elemennya',
             10 => 'Dua karakter `.` berturut-turut dalam nama kolom atau tabel',
             11 => '%s: kesalahan koneksi ke database: %s',
+            12 => '%s: transaksi sudah aktif',
+            13 => '%s: tidak ada transaksi aktif',
         ],
         'pt-BR' => [
             0 => '%s: erro ao definir codificação de caracteres: %s',
@@ -235,6 +261,8 @@ class Mysql
             9 => 'Tentativa de usar um placeholder de array sem especificar o tipo de dados de seus elementos',
             10 => 'Dois caracteres `.` consecutivos em um nome de coluna ou tabela',
             11 => '%s: erro de conexão ao banco de dados: %s',
+            12 => '%s: uma transação já está ativa',
+            13 => '%s: nenhuma transação ativa',
         ],
         'hi' => [
             0 => '%s: वर्ण एन्कोडिंग सेट करने में त्रुटि: %s',
@@ -249,6 +277,8 @@ class Mysql
             9 => 'इसके तत्वों का डेटा प्रकार निर्दिष्ट किए बिना ऐरे प्लेसहोल्डर का उपयोग करने का प्रयास',
             10 => 'कॉलम या टेबल नाम में दो लगातार `.` वर्ण',
             11 => '%s: डेटाबेस कनेक्शन त्रुटि: %s',
+            12 => '%s: एक ट्रांज़ैक्शन पहले से सक्रिय है',
+            13 => '%s: कोई सक्रिय ट्रांज़ैक्शन नहीं है',
         ],
         'ar' => [
             0 => '%s: خطأ في تعيين ترميز الأحرف: %s',
@@ -263,6 +293,8 @@ class Mysql
             9 => 'محاولة استخدام عنصر نائب مصفوفة دون تحديد نوع البيانات لعناصرها',
             10 => 'حرفان `.` متتاليان في اسم عمود أو جدول',
             11 => '%s: خطأ في الاتصال بقاعدة البيانات: %s',
+            12 => '%s: هناك معاملة نشطة بالفعل',
+            13 => '%s: لا توجد معاملة نشطة',
         ],
         'tr' => [
             0 => '%s: karakter kodlamasını ayarlama hatası: %s',
@@ -277,6 +309,8 @@ class Mysql
             9 => 'Elemanlarının veri türünü belirtmeden dizi yer tutucusu kullanma girişimi',
             10 => 'Sütun veya tablo adında ardışık iki `.` karakteri',
             11 => '%s: veritabanı bağlantı hatası: %s',
+            12 => '%s: zaten etkin bir işlem var',
+            13 => '%s: etkin işlem yok',
         ],
         'vi' => [
             0 => '%s: lỗi thiết lập mã hóa ký tự: %s',
@@ -291,6 +325,8 @@ class Mysql
             9 => 'Cố gắng sử dụng placeholder mảng mà không chỉ định kiểu dữ liệu của các phần tử của nó',
             10 => 'Hai ký tự `.` liên tiếp trong tên cột hoặc bảng',
             11 => '%s: lỗi kết nối cơ sở dữ liệu: %s',
+            12 => '%s: một giao dịch đã đang hoạt động',
+            13 => '%s: không có giao dịch nào đang hoạt động',
         ],
     ];
 
@@ -574,6 +610,139 @@ class Mysql
         array_unshift($arguments, $query);
 
         return call_user_func_array([$this, 'query'], $arguments);
+    }
+
+    /**
+     * Starts a new transaction (`START TRANSACTION`).
+     * The library does not support nested transactions: an attempt to start
+     * a transaction while another one is active will throw an exception
+     * (a bare `START TRANSACTION` inside a transaction would silently commit it).
+     *
+     * Attention: the transaction state is tracked only when the transaction
+     * is managed by methods of this class. If you mix them with direct calls
+     * on the mysqli object (@see Mysql::getMysqli()), the state returned by
+     * @see Mysql::isInTransaction() will not reflect reality.
+     *
+     * @return Mysql
+     * @throws MySqlException if a transaction is already active or the query fails
+     * @see mysqli::begin_transaction
+     */
+    public function beginTransaction(): Mysql
+    {
+        if ($this->in_transaction) {
+            throw new MySqlException(
+                sprintf($this->i18n_error_messages[$this->lang][12], __METHOD__)
+            );
+        }
+
+        $this->query('START TRANSACTION');
+        $this->in_transaction = true;
+
+        return $this;
+    }
+
+    /**
+     * Commits the current transaction (`COMMIT`).
+     *
+     * @return Mysql
+     * @throws MySqlException if there is no active transaction or the query fails
+     * @see mysqli::commit
+     */
+    public function commit(): Mysql
+    {
+        if (!$this->in_transaction) {
+            throw new MySqlException(
+                sprintf($this->i18n_error_messages[$this->lang][13], __METHOD__)
+            );
+        }
+
+        try {
+            $this->query('COMMIT');
+        } finally {
+            // Каким бы ни был исход COMMIT (успех, дедлок, обрыв соединения) —
+            // пригодной к использованию транзакции после него уже нет.
+            $this->in_transaction = false;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Rolls back the current transaction (`ROLLBACK`).
+     *
+     * @return Mysql
+     * @throws MySqlException if there is no active transaction or the query fails
+     * @see mysqli::rollback
+     */
+    public function rollback(): Mysql
+    {
+        if (!$this->in_transaction) {
+            throw new MySqlException(
+                sprintf($this->i18n_error_messages[$this->lang][13], __METHOD__)
+            );
+        }
+
+        try {
+            $this->query('ROLLBACK');
+        } finally {
+            // См. комментарий в self::commit()
+            $this->in_transaction = false;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Is a transaction started by self::beginTransaction() currently active?
+     *
+     * @return bool
+     */
+    public function isInTransaction(): bool
+    {
+        return $this->in_transaction;
+    }
+
+    /**
+     * Executes the $callback function within a transaction: starts a transaction,
+     * executes the function and commits, returning the value returned by the
+     * function. If the function throws any exception, the transaction is rolled
+     * back and the original exception is rethrown.
+     *
+     * The current Mysql object is passed to the function as a parameter.
+     *
+     * Example:
+     *     $db->transactional(function (Mysql $db) use ($from, $to): void {
+     *         $db->query('UPDATE `account` SET `balance` = `balance` - 100 WHERE `id` = ?i', $from);
+     *         $db->query('UPDATE `account` SET `balance` = `balance` + 100 WHERE `id` = ?i', $to);
+     *     });
+     *
+     * @param callable $callback function with signature fn(Mysql $db): mixed
+     * @return mixed the value returned by $callback
+     * @throws MySqlException
+     * @throws Throwable the exception thrown by $callback
+     */
+    public function transactional(callable $callback): mixed
+    {
+        $this->beginTransaction();
+
+        try {
+            $result = $callback($this);
+            $this->commit();
+
+            return $result;
+        } catch (Throwable $e) {
+            // Если упал сам COMMIT, флаг уже сброшен и откатывать нечего.
+            if ($this->in_transaction) {
+                try {
+                    $this->rollback();
+                } catch (Throwable) {
+                    // Соединение могло быть потеряно вместе с транзакцией — сервер
+                    // откатит её сам; наружу должна улететь первопричина, а не ошибка отката.
+                }
+            }
+
+            throw $e;
+        }
     }
 
     /**
